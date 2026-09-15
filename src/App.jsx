@@ -20,7 +20,8 @@ function App() {
     const commit = {
       id,
       message,
-      parent: repo.branches[repo.currentBranch]
+      parent: repo.branches[repo.currentBranch],
+      branch: repo.currentBranch
     };
 
     setRepo((current) => ({
@@ -173,6 +174,22 @@ function App() {
     setCommand("");
   }
 
+  const branchNames = Object.keys(repo.branches);
+
+  const branchRows = branchNames.reduce((rows, branch, index) => {
+    rows[branch] = 90 + index * 90;
+    return rows;
+  }, {});
+
+  const commitPositions = {};
+
+  repo.commits.forEach((commit, index) => {
+    commitPositions[commit.id] = {
+      x: 90 + index * 120,
+      y: branchRows[commit.branch] || 90
+    };
+  });
+
   return (
     <div className="app">
       <header className="topbar">
@@ -200,36 +217,118 @@ function App() {
             </div>
           </div>
 
-          <div className="empty-graph">
+          <div className="graph">
             {repo.commits.length === 0 ? (
-              <>
+              <div className="empty-graph">
                 <div className="empty-dot"></div>
-
                 <p>
                   {repo.initialized
                     ? "No commits yet"
                     : "No repository"}
                 </p>
-
                 <small>
                   {repo.initialized
                     ? 'Run git commit -m "message".'
                     : "Run git init to get started."}
                 </small>
-              </>
-            ) : (
-              <div className="commit-list">
-                {repo.commits.map((commit) => (
-                  <div className="commit" key={commit.id}>
-                    <div className="commit-dot"></div>
-
-                    <div>
-                      <strong>{commit.message}</strong>
-                      <small>{commit.id}</small>
-                    </div>
-                  </div>
-                ))}
               </div>
+            ) : (
+              <svg
+                className="commit-graph"
+                viewBox={`0 0 ${Math.max(
+                  700,
+                  repo.commits.length * 120 + 150
+                )} 300`}
+                preserveAspectRatio="xMinYMid meet"
+              >
+                {repo.commits.map((commit) => {
+                  const current = commitPositions[commit.id];
+
+                  if (!commit.parent) return null;
+
+                  const parent = commitPositions[commit.parent];
+
+                  if (!parent) return null;
+
+                  return (
+                    <line
+                      key={`${commit.id}-line`}
+                      x1={parent.x}
+                      y1={parent.y}
+                      x2={current.x}
+                      y2={current.y}
+                      className={
+                        parent.y === current.y
+                          ? "graph-line"
+                          : "branch-line"
+                      }
+                    />
+                  );
+                })}
+
+                {repo.commits.map((commit) => {
+                  const position = commitPositions[commit.id];
+                  const isHead =
+                    repo.branches[repo.currentBranch] === commit.id;
+
+                  return (
+                    <g key={commit.id}>
+                      <circle
+                        cx={position.x}
+                        cy={position.y}
+                        r="8"
+                        className={
+                          isHead
+                            ? "commit-node current"
+                            : "commit-node"
+                        }
+                      />
+
+                      <text
+                        x={position.x}
+                        y={position.y - 18}
+                        className="commit-id"
+                        textAnchor="middle"
+                      >
+                        {commit.id}
+                      </text>
+
+                      {isHead && (
+                        <text
+                          x={position.x}
+                          y={position.y + 28}
+                          className="head-label"
+                          textAnchor="middle"
+                        >
+                          HEAD
+                        </text>
+                      )}
+                    </g>
+                  );
+                })}
+
+                {branchNames.map((branch) => {
+                  const commitId = repo.branches[branch];
+                  const position = commitPositions[commitId];
+
+                  if (!position) return null;
+
+                  return (
+                    <text
+                      key={branch}
+                      x={position.x + 16}
+                      y={position.y + 4}
+                      className={
+                        branch === repo.currentBranch
+                          ? "branch-label active"
+                          : "branch-label"
+                      }
+                    >
+                      {branch}
+                    </text>
+                  );
+                })}
+              </svg>
             )}
           </div>
         </section>
