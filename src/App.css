@@ -300,3 +300,19 @@ input {
     min-height: 350px;
   }
 }
+.challenge {
+  padding: 14px 22px;
+  border-bottom: 1px solid #292c28;
+  background: #121310;
+}
+
+.challenge-title {
+  color: #c8cbc4;
+  font-size: 12px;
+}
+
+.challenge-step {
+  margin-top: 5px;
+  color: #666b63;
+  font-size: 11px;
+}

@@ -1,9 +1,33 @@
 import { useState } from "react";
 import "./App.css";
 
+const challenges = [
+  {
+    title: "Create a feature branch",
+    steps: [
+      "git init",
+      'git commit -m "first commit"',
+      "git checkout -b feature"
+    ]
+  },
+  {
+    title: "Merge a feature",
+    steps: [
+      "git init",
+      'git commit -m "first commit"',
+      "git checkout -b feature",
+      'git commit -m "feature work"',
+      "git checkout main",
+      "git merge feature"
+    ]
+  }
+];
+
 function App() {
   const [command, setCommand] = useState("");
   const [history, setHistory] = useState([]);
+  const [challengeIndex, setChallengeIndex] = useState(0);
+  const [challengeStep, setChallengeStep] = useState(0);
 
   const [repo, setRepo] = useState({
     initialized: false,
@@ -16,14 +40,13 @@ function App() {
 
   function createCommit(message) {
     const id = Math.random().toString(16).slice(2, 8);
+    const currentHead = repo.branches[repo.currentBranch];
 
     const commit = {
       id,
       message,
-      parent: repo.branches[repo.currentBranch],
-      parents: repo.branches[repo.currentBranch]
-        ? [repo.branches[repo.currentBranch]]
-        : [],
+      parent: currentHead,
+      parents: currentHead ? [currentHead] : [],
       branch: repo.currentBranch
     };
 
@@ -44,21 +67,15 @@ function App() {
     const source = repo.branches[branchName];
 
     if (branchName === repo.currentBranch) {
-      return {
-        output: "Already up to date."
-      };
+      return "Already up to date.";
     }
 
     if (source === undefined) {
-      return {
-        output: `merge: ${branchName} - branch not found`
-      };
+      return `merge: ${branchName} - branch not found`;
     }
 
     if (source === target) {
-      return {
-        output: "Already up to date."
-      };
+      return "Already up to date.";
     }
 
     const id = Math.random().toString(16).slice(2, 8);
@@ -80,9 +97,7 @@ function App() {
       }
     }));
 
-    return {
-      output: `Merge made by simulated Git.\n[${repo.currentBranch} ${id}] ${commit.message}`
-    };
+    return `Merge made by simulated Git.\n[${repo.currentBranch} ${id}] ${commit.message}`;
   }
 
   function handleCommand(event) {
@@ -107,19 +122,55 @@ function App() {
       }
     }
 
-    else if (value.startsWith("git commit -m ")) {
+    else if (value === "git status") {
       if (!repo.initialized) {
         output = "fatal: not a git repository";
       } else {
-        const match = value.match(/^git commit -m ["'](.+)["']$/);
+        output = `On branch ${repo.currentBranch}\nworking tree clean`;
+      }
+    }
 
-        if (!match) {
-          output = 'error: use git commit -m "message"';
+    else if (value === "git log") {
+      if (!repo.initialized) {
+        output = "fatal: not a git repository";
+      } else if (!repo.commits.length) {
+        output = "No commits yet.";
+      } else {
+        const currentHead = repo.branches[repo.currentBranch];
+        const commits = [];
+
+        let current = repo.commits.find(
+          (commit) => commit.id === currentHead
+        );
+
+        while (current) {
+          commits.push(
+            `commit ${current.id}\n    ${current.message}`
+          );
+
+          current = repo.commits.find(
+            (commit) => commit.id === current.parents[0]
+          );
+        }
+
+        output = commits.join("\n\n");
+      }
+    }
+
+    else if (value === "git show") {
+      if (!repo.initialized) {
+        output = "fatal: not a git repository";
+      } else {
+        const head = repo.branches[repo.currentBranch];
+
+        if (!head) {
+          output = "No commits yet.";
         } else {
-          const message = match[1];
-          const id = createCommit(message);
+          const commit = repo.commits.find(
+            (item) => item.id === head
+          );
 
-          output = `[${repo.currentBranch} ${id}] ${message}`;
+          output = `commit ${commit.id}\n\n${commit.message}`;
         }
       }
     }
@@ -166,7 +217,9 @@ function App() {
       if (!repo.initialized) {
         output = "fatal: not a git repository";
       } else {
-        const branchName = value.replace("git checkout -b ", "").trim();
+        const branchName = value
+          .replace("git checkout -b ", "")
+          .trim();
 
         if (!branchName) {
           output = "error: branch name required";
@@ -191,7 +244,9 @@ function App() {
       if (!repo.initialized) {
         output = "fatal: not a git repository";
       } else {
-        const branchName = value.replace("git checkout ", "").trim();
+        const branchName = value
+          .replace("git checkout ", "")
+          .trim();
 
         if (repo.branches[branchName] === undefined) {
           output = `error: pathspec '${branchName}' did not match any branch`;
@@ -208,18 +263,76 @@ function App() {
       }
     }
 
+    else if (value.startsWith("git commit -m ")) {
+      if (!repo.initialized) {
+        output = "fatal: not a git repository";
+      } else {
+        const match = value.match(
+          /^git commit -m ["'](.+)["']$/
+        );
+
+        if (!match) {
+          output = 'error: use git commit -m "message"';
+        } else {
+          const id = createCommit(match[1]);
+          output = `[${repo.currentBranch} ${id}] ${match[1]}`;
+        }
+      }
+    }
+
     else if (value.startsWith("git merge ")) {
       if (!repo.initialized) {
         output = "fatal: not a git repository";
       } else {
-        const branchName = value.replace("git merge ", "").trim();
-        const result = mergeBranch(branchName);
-        output = result.output;
+        const branchName = value
+          .replace("git merge ", "")
+          .trim();
+
+        output = mergeBranch(branchName);
       }
+    }
+
+    else if (value === "clear") {
+      setHistory([]);
+      setCommand("");
+      return;
+    }
+
+    else if (value === "help") {
+      output =
+        "Available commands:\n" +
+        "git init\n" +
+        "git status\n" +
+        "git commit -m \"message\"\n" +
+        "git branch\n" +
+        "git checkout <branch>\n" +
+        "git checkout -b <branch>\n" +
+        "git merge <branch>\n" +
+        "git log\n" +
+        "git show\n" +
+        "clear";
     }
 
     else {
       output = `git: '${value.replace("git ", "")}' is not available yet`;
+    }
+
+    const challenge = challenges[challengeIndex];
+    const expectedCommand = challenge.steps[challengeStep];
+
+    let challengeMessage = null;
+
+    if (value === expectedCommand) {
+      if (challengeStep === challenge.steps.length - 1) {
+        challengeMessage = `✓ Challenge complete: ${challenge.title}`;
+
+        if (challengeIndex < challenges.length - 1) {
+          setChallengeIndex((current) => current + 1);
+          setChallengeStep(0);
+        }
+      } else {
+        setChallengeStep((current) => current + 1);
+      }
     }
 
     setHistory((current) => [
@@ -227,7 +340,15 @@ function App() {
       {
         input: value,
         output
-      }
+      },
+      ...(challengeMessage
+        ? [
+            {
+              input: "",
+              output: challengeMessage
+            }
+          ]
+        : [])
     ]);
 
     setCommand("");
@@ -249,6 +370,8 @@ function App() {
     };
   });
 
+  const challenge = challenges[challengeIndex];
+
   return (
     <div className="app">
       <header className="topbar">
@@ -259,7 +382,9 @@ function App() {
 
         <div className="status">
           <span></span>
-          {repo.initialized ? "repository active" : "no repository"}
+          {repo.initialized
+            ? "repository active"
+            : "no repository"}
         </div>
       </header>
 
@@ -305,7 +430,7 @@ function App() {
                 {repo.commits.map((commit) => {
                   const current = commitPositions[commit.id];
 
-                  return commit.parents.map((parentId, parentIndex) => {
+                  return commit.parents.map((parentId, index) => {
                     const parent = commitPositions[parentId];
 
                     if (!parent) return null;
@@ -318,7 +443,7 @@ function App() {
                         x2={current.x}
                         y2={current.y}
                         className={
-                          parentIndex === 0
+                          index === 0
                             ? "graph-line"
                             : "branch-line"
                         }
@@ -404,16 +529,25 @@ function App() {
           <div className="terminal">
             <div className="terminal-output">
               <div className="welcome">
-                <strong>Git Playground</strong>
-                <span>Type a Git command to begin.</span>
+                <strong>{challenge.title}</strong>
+
+                <span>
+                  Step {Math.min(
+                    challengeStep + 1,
+                    challenge.steps.length
+                  )}{" "}
+                  of {challenge.steps.length}
+                </span>
               </div>
 
               {history.map((item, index) => (
                 <div className="command-block" key={index}>
-                  <div>
-                    <span className="prompt">$</span>
-                    {item.input}
-                  </div>
+                  {item.input && (
+                    <div>
+                      <span className="prompt">$</span>
+                      {item.input}
+                    </div>
+                  )}
 
                   <div className="command-output">
                     {item.output}
@@ -422,7 +556,10 @@ function App() {
               ))}
             </div>
 
-            <form onSubmit={handleCommand} className="command-form">
+            <form
+              onSubmit={handleCommand}
+              className="command-form"
+            >
               <span className="prompt">$</span>
 
               <input
