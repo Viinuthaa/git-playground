@@ -238,3 +238,51 @@ input {
     min-height: 420px;
   }
 }
+.commit-list {
+  width: 70%;
+}
+
+.commit {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 58px;
+  padding-left: 8px;
+}
+
+.commit:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  left: 13px;
+  top: 38px;
+  width: 1px;
+  height: 40px;
+  background: #41463f;
+}
+
+.commit-dot {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 2px solid #8bb39a;
+  border-radius: 50%;
+  background: #151613;
+}
+
+.commit strong {
+  display: block;
+  color: #c8cbc4;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.commit small {
+  display: block;
+  margin-top: 4px;
+  color: #666b63;
+  font-family: Consolas, Monaco, monospace;
+  font-size: 11px;
+}
