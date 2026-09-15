@@ -8,8 +8,10 @@ function App() {
   const [repo, setRepo] = useState({
     initialized: false,
     commits: [],
-    currentBranch: "main",
-    head: null
+    branches: {
+      main: null
+    },
+    currentBranch: "main"
   });
 
   function createCommit(message) {
@@ -18,13 +20,16 @@ function App() {
     const commit = {
       id,
       message,
-      parent: repo.head
+      parent: repo.branches[repo.currentBranch]
     };
 
     setRepo((current) => ({
       ...current,
       commits: [...current.commits, commit],
-      head: id
+      branches: {
+        ...current.branches,
+        [current.currentBranch]: id
+      }
     }));
 
     return id;
@@ -50,7 +55,9 @@ function App() {
 
         output = "Initialized empty Git repository.";
       }
-    } else if (value.startsWith("git commit -m ")) {
+    }
+
+    else if (value.startsWith("git commit -m ")) {
       if (!repo.initialized) {
         output = "fatal: not a git repository";
       } else {
@@ -65,7 +72,93 @@ function App() {
           output = `[${repo.currentBranch} ${id}] ${message}`;
         }
       }
-    } else {
+    }
+
+    else if (value === "git branch") {
+      if (!repo.initialized) {
+        output = "fatal: not a git repository";
+      } else {
+        output = Object.keys(repo.branches)
+          .map((branch) =>
+            branch === repo.currentBranch
+              ? `* ${branch}`
+              : `  ${branch}`
+          )
+          .join("\n");
+      }
+    }
+
+    else if (value.startsWith("git branch ")) {
+      if (!repo.initialized) {
+        output = "fatal: not a git repository";
+      } else {
+        const branchName = value.replace("git branch ", "").trim();
+
+        if (!branchName) {
+          output = "error: branch name required";
+        } else if (repo.branches[branchName] !== undefined) {
+          output = `fatal: branch '${branchName}' already exists`;
+        } else {
+          setRepo((current) => ({
+            ...current,
+            branches: {
+              ...current.branches,
+              [branchName]: current.branches[current.currentBranch]
+            }
+          }));
+
+          output = `Created branch '${branchName}'.`;
+        }
+      }
+    }
+
+    else if (value.startsWith("git checkout -b ")) {
+      if (!repo.initialized) {
+        output = "fatal: not a git repository";
+      } else {
+        const branchName = value.replace("git checkout -b ", "").trim();
+
+        if (!branchName) {
+          output = "error: branch name required";
+        } else if (repo.branches[branchName] !== undefined) {
+          output = `fatal: branch '${branchName}' already exists`;
+        } else {
+          setRepo((current) => ({
+            ...current,
+            currentBranch: branchName,
+            branches: {
+              ...current.branches,
+              [branchName]: current.branches[current.currentBranch]
+            }
+          }));
+
+          output = `Switched to a new branch '${branchName}'`;
+        }
+      }
+    }
+
+    else if (value.startsWith("git checkout ")) {
+      if (!repo.initialized) {
+        output = "fatal: not a git repository";
+      } else {
+        const branchName = value.replace("git checkout ", "").trim();
+
+        if (repo.branches[branchName] === undefined) {
+          output = `error: pathspec '${branchName}' did not match any branch`;
+        } else if (branchName === repo.currentBranch) {
+          output = `Already on '${branchName}'`;
+        } else {
+          setRepo((current) => ({
+            ...current,
+            currentBranch: branchName
+          }));
+
+          output = `Switched to branch '${branchName}'`;
+        }
+      }
+    }
+
+    else {
       output = `git: '${value.replace("git ", "")}' is not available yet`;
     }
 
@@ -103,7 +196,7 @@ function App() {
             </div>
 
             <div className="head">
-              HEAD {repo.head ? repo.head : "—"}
+              HEAD {repo.branches[repo.currentBranch] || "—"}
             </div>
           </div>
 

@@ -98,6 +98,7 @@ input {
   margin: 0;
   font-size: 15px;
   font-weight: 500;
+  color: #d7d9d3;
 }
 
 .head {
@@ -285,4 +286,16 @@ input {
   color: #666b63;
   font-family: Consolas, Monaco, monospace;
   font-size: 11px;
+}
+.commit {
+  position: relative;
+}
+
+.commit:not(:last-child)::after {
+  height: 46px;
+}
+
+.commit-list {
+  max-height: 520px;
+  overflow-y: auto;
 }
