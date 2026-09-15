@@ -21,6 +21,9 @@ function App() {
       id,
       message,
       parent: repo.branches[repo.currentBranch],
+      parents: repo.branches[repo.currentBranch]
+        ? [repo.branches[repo.currentBranch]]
+        : [],
       branch: repo.currentBranch
     };
 
@@ -34,6 +37,52 @@ function App() {
     }));
 
     return id;
+  }
+
+  function mergeBranch(branchName) {
+    const target = repo.branches[repo.currentBranch];
+    const source = repo.branches[branchName];
+
+    if (branchName === repo.currentBranch) {
+      return {
+        output: "Already up to date."
+      };
+    }
+
+    if (source === undefined) {
+      return {
+        output: `merge: ${branchName} - branch not found`
+      };
+    }
+
+    if (source === target) {
+      return {
+        output: "Already up to date."
+      };
+    }
+
+    const id = Math.random().toString(16).slice(2, 8);
+
+    const commit = {
+      id,
+      message: `Merge branch '${branchName}'`,
+      parent: target,
+      parents: [target, source],
+      branch: repo.currentBranch
+    };
+
+    setRepo((current) => ({
+      ...current,
+      commits: [...current.commits, commit],
+      branches: {
+        ...current.branches,
+        [current.currentBranch]: id
+      }
+    }));
+
+    return {
+      output: `Merge made by simulated Git.\n[${repo.currentBranch} ${id}] ${commit.message}`
+    };
   }
 
   function handleCommand(event) {
@@ -159,6 +208,16 @@ function App() {
       }
     }
 
+    else if (value.startsWith("git merge ")) {
+      if (!repo.initialized) {
+        output = "fatal: not a git repository";
+      } else {
+        const branchName = value.replace("git merge ", "").trim();
+        const result = mergeBranch(branchName);
+        output = result.output;
+      }
+    }
+
     else {
       output = `git: '${value.replace("git ", "")}' is not available yet`;
     }
@@ -221,11 +280,13 @@ function App() {
             {repo.commits.length === 0 ? (
               <div className="empty-graph">
                 <div className="empty-dot"></div>
+
                 <p>
                   {repo.initialized
                     ? "No commits yet"
                     : "No repository"}
                 </p>
+
                 <small>
                   {repo.initialized
                     ? 'Run git commit -m "message".'
@@ -244,30 +305,31 @@ function App() {
                 {repo.commits.map((commit) => {
                   const current = commitPositions[commit.id];
 
-                  if (!commit.parent) return null;
+                  return commit.parents.map((parentId, parentIndex) => {
+                    const parent = commitPositions[parentId];
 
-                  const parent = commitPositions[commit.parent];
+                    if (!parent) return null;
 
-                  if (!parent) return null;
-
-                  return (
-                    <line
-                      key={`${commit.id}-line`}
-                      x1={parent.x}
-                      y1={parent.y}
-                      x2={current.x}
-                      y2={current.y}
-                      className={
-                        parent.y === current.y
-                          ? "graph-line"
-                          : "branch-line"
-                      }
-                    />
-                  );
+                    return (
+                      <line
+                        key={`${commit.id}-${parentId}`}
+                        x1={parent.x}
+                        y1={parent.y}
+                        x2={current.x}
+                        y2={current.y}
+                        className={
+                          parentIndex === 0
+                            ? "graph-line"
+                            : "branch-line"
+                        }
+                      />
+                    );
+                  });
                 })}
 
                 {repo.commits.map((commit) => {
                   const position = commitPositions[commit.id];
+
                   const isHead =
                     repo.branches[repo.currentBranch] === commit.id;
 
