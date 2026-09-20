@@ -67,7 +67,7 @@ input {
 }
 
 .graph-panel,
-.terminal {
+.terminal-panel {
   background: #151613;
   border: 1px solid #292c27;
   border-radius: 8px;
@@ -79,8 +79,7 @@ input {
   flex-direction: column;
 }
 
-.panel-header,
-.terminal-top {
+.panel-header {
   height: 48px;
   padding: 0 16px;
   display: flex;
@@ -100,96 +99,72 @@ input {
   display: block;
 }
 
-.empty-graph {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 30px;
-  color: #656b62;
-  font-size: 13px;
-  text-align: center;
-}
-
-.empty-graph code {
-  margin: 0 4px;
-  color: #a6b09f;
-}
-
-.graph-line {
+.commit-line {
   stroke: #596456;
   stroke-width: 2;
 }
 
-.commit-dot {
+.commit-node {
   fill: #9aaa91;
   stroke: #151613;
   stroke-width: 3;
 }
 
-.commit-id {
+.commit-label {
   fill: #7d8579;
   font-size: 10px;
   text-anchor: middle;
 }
 
-.branch-label {
-  fill: #aab1a5;
-  font-size: 12px;
-}
-
-.head-label {
-  fill: #91a987;
-  font-size: 10px;
-}
-
-.terminal {
+.terminal-panel {
   display: flex;
   flex-direction: column;
+  min-height: 580px;
   background: #0d0e0c;
 }
 
-.terminal-top {
+.terminal-panel .panel-header {
   background: #151613;
+  flex-shrink: 0;
 }
 
 .challenge {
+  padding: 18px 20px 12px;
   color: #a1ad99;
-  text-transform: none;
-  letter-spacing: 0;
+}
+
+.challenge strong {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 14px;
+}
+
+.challenge p {
+  margin: 0;
+  color: #858d82;
+  font-size: 13px;
 }
 
 .terminal-output {
   flex: 1;
+  min-height: 0;
   padding: 18px 20px;
   overflow-y: auto;
-  min-height: 0;
 }
 
-.history-item {
+.terminal-entry {
   margin-bottom: 16px;
 }
 
-.command-line {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
+.terminal-command {
   margin-bottom: 6px;
   color: #d6dbd2;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 13px;
-}
-
-.prompt {
-  flex-shrink: 0;
-  color: #91a987;
-}
-
-.command-line span:last-child {
   word-break: break-word;
 }
 
-.history-item pre {
+.terminal-entry pre {
   margin: 0 0 0 20px;
   color: #858d82;
   font-family: "SFMono-Regular", Consolas, monospace;
@@ -198,16 +173,25 @@ input {
   white-space: pre-wrap;
 }
 
-.terminal-input {
+.terminal-form {
   display: flex;
   align-items: center;
   gap: 10px;
+  margin-top: auto;
   padding: 15px 20px;
   border-top: 1px solid #292c27;
   background: #10110f;
+  flex-shrink: 0;
 }
 
-.terminal-input input {
+.terminal-form span {
+  flex-shrink: 0;
+  color: #91a987;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 13px;
+}
+
+.terminal-form input {
   flex: 1;
   min-width: 0;
   border: none;
@@ -218,7 +202,7 @@ input {
   font-size: 13px;
 }
 
-.terminal-input input::placeholder {
+.terminal-form input::placeholder {
   color: #555b53;
 }
 
@@ -260,7 +244,7 @@ input {
     min-height: 350px;
   }
 
-  .terminal {
+  .terminal-panel {
     min-height: 500px;
   }
 }
