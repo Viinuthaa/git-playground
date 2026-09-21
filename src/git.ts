@@ -18,10 +18,9 @@ export type Commit = {
   files: string[]
 }
 
-export type Head = {
-  type: "branch"
-  name: string
-}
+export type Head =
+  | { type: "branch"; name: string }
+  | { type: "detached"; commit: string }
 
 export type Repo = {
   initialized: boolean
@@ -30,6 +29,7 @@ export type Repo = {
   commits: Commit[]
   branches: Record<string, string | null>
   head: Head
+  reflog: string[]
 }
 
 export type CommandResult = {
@@ -43,13 +43,9 @@ export function createRepo(): Repo {
     files: [],
     staging: [],
     commits: [],
-    branches: {
-      main: null
-    },
-    head: {
-      type: "branch",
-      name: "main"
-    }
+    branches: { main: null },
+    head: { type: "branch", name: "main" },
+    reflog: []
   }
 }
 
@@ -61,7 +57,10 @@ export function createCommit(
   return {
     id: Math.random().toString(16).slice(2, 9),
     message,
-    branch: repo.head.name,
+    branch:
+      repo.head.type === "branch"
+        ? repo.head.name
+        : "HEAD",
     parents,
     files: [...repo.staging]
   }
