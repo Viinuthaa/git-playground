@@ -21,6 +21,18 @@ function GitGraph({ repo }: GitGraphProps) {
     return 100 + getBranchIndex(branch) * 120
   }
 
+  const headCommitId =
+    repo.branches[repo.currentBranch]
+
+  const headCommitIndex = repo.commits.findIndex(
+    commit => commit.id === headCommitId
+  )
+
+  const headCommit =
+    headCommitIndex >= 0
+      ? repo.commits[headCommitIndex]
+      : null
+
   return (
     <svg
       className="git-graph"
@@ -58,17 +70,11 @@ function GitGraph({ repo }: GitGraphProps) {
               const parent =
                 repo.commits[parentIndex]
 
-              const parentX =
-                getX(parentIndex)
-
-              const parentY =
-                getY(parent.branch)
-
               return (
                 <line
                   key={`${commit.id}-${parentId}`}
-                  x1={parentX}
-                  y1={parentY}
+                  x1={getX(parentIndex)}
+                  y1={getY(parent.branch)}
                   x2={x}
                   y2={y}
                   className="commit-line"
@@ -94,16 +100,10 @@ function GitGraph({ repo }: GitGraphProps) {
         )
       })}
 
-      {repo.initialized && (
+      {headCommit && (
         <text
-          x={
-            getX(
-              Math.max(repo.commits.length - 1, 0)
-            )
-          }
-          y={
-            getY(repo.currentBranch) + 35
-          }
+          x={getX(headCommitIndex)}
+          y={getY(headCommit.branch) + 35}
           className="head-label"
         >
           HEAD → {repo.currentBranch}

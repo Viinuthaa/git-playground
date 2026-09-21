@@ -31,7 +31,9 @@ export function createRepo(): Repo {
 }
 
 export function makeId(): string {
-  return Math.random().toString(16).slice(2, 9)
+  return Math.random()
+    .toString(16)
+    .slice(2, 9)
 }
 
 export function createCommit(

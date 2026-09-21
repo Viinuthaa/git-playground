@@ -2,43 +2,55 @@
 
 An interactive Git command trainer that turns common Git operations into a visual commit graph.
 
-Type Git commands into the terminal and watch the repository state change.
+Type Git commands into the terminal and watch branches, commits, and `HEAD` change.
 
 ## What it does
 
-- Simulates `git init`
+- Initializes a repository
 - Creates commits
 - Creates and switches branches
+- Deletes branches
 - Simulates merges
-- Visualizes commits using SVG
-- Shows HEAD and branch positions
-- Provides Git command feedback
+- Simulates `git reset HEAD~1`
+- Visualizes commit relationships with SVG
+- Shows branch positions and `HEAD`
+- Provides command feedback
 - Includes guided Git challenges
-- Supports commands such as `git status`, `git log`, `git show`, and `git branch`
+- Supports commands such as:
+  - `git init`
+  - `git status`
+  - `git branch`
+  - `git branch <name>`
+  - `git branch -d <name>`
+  - `git checkout <branch>`
+  - `git checkout -b <name>`
+  - `git commit -m "message"`
+  - `git log`
+  - `git show`
+  - `git merge <branch>`
+  - `git reset HEAD~1`
 
 ## Built with
 
 - React
-- JavaScript
+- TypeScript
 - CSS
 - SVG
+- Vite
 
 ## Why I built this
 
-Git is easy to use once you know the commands, but understanding what is actually happening to branches, commits, and HEAD can be confusing.
+Git is easy to use once you know the commands, but understanding what is actually happening to branches, commits, and `HEAD` can be confusing.
 
 Git Playground is my attempt to make those relationships easier to see and experiment with.
 
 ## What's next
 
-The current version runs entirely in the browser.
-
-Future versions can add:
+Future versions can explore:
 
 - More Git commands
-- Better branch graph animations
+- More realistic Git behavior
+- Better graph interactions
 - More challenges
-- User accounts
-- Saved progress
-- Persistent learning history
-- Backend and database support
+- Persistent learning progress
+- Backend support

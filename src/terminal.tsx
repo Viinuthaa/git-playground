@@ -1,3 +1,4 @@
+import type { FormEvent } from "react"
 import type { Challenge } from "./challenges"
 
 type HistoryItem = {
@@ -11,7 +12,7 @@ type TerminalProps = {
   history: HistoryItem[]
   command: string
   setCommand: (value: string) => void
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void
 }
 
 function Terminal({
@@ -51,13 +52,21 @@ function Terminal({
         ))}
       </div>
 
-      <form onSubmit={onSubmit} className="terminal-form">
+      <form
+        onSubmit={onSubmit}
+        className="terminal-form"
+      >
         <span>$</span>
 
         <input
           value={command}
-          onChange={event => setCommand(event.target.value)}
+          onChange={event =>
+            setCommand(event.target.value)
+          }
           placeholder="type a git command..."
+          aria-label="Git command"
+          autoComplete="off"
+          spellCheck={false}
         />
       </form>
     </div>

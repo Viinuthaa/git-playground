@@ -115,7 +115,8 @@ function runDeleteBranch(
   if (name === repo.currentBranch) {
     return {
       repo,
-      output: `Cannot delete the current branch '${name}'.`
+      output:
+        `Cannot delete the current branch '${name}'.`
     }
   }
 
@@ -173,7 +174,8 @@ function runCheckout(
         },
         currentBranch: name
       },
-      output: `Switched to a new branch '${name}'.`
+      output:
+        `Switched to a new branch '${name}'.`
     }
   }
 
@@ -239,12 +241,43 @@ function runCommit(
   }
 }
 
+function getReachableCommits(repo: Repo): Set<string> {
+  const reachable = new Set<string>()
+  const head = repo.branches[repo.currentBranch]
+
+  function visit(commitId: string | null) {
+    if (!commitId || reachable.has(commitId)) {
+      return
+    }
+
+    const commit = repo.commits.find(
+      item => item.id === commitId
+    )
+
+    if (!commit) {
+      return
+    }
+
+    reachable.add(commit.id)
+
+    for (const parent of commit.parents) {
+      visit(parent)
+    }
+  }
+
+  visit(head)
+
+  return reachable
+}
+
 function runLog(repo: Repo): CommandResult {
   if (!repo.initialized) {
     return notRepository(repo)
   }
 
-  if (repo.commits.length === 0) {
+  const reachable = getReachableCommits(repo)
+
+  if (reachable.size === 0) {
     return {
       repo,
       output: "No commits yet."
@@ -256,6 +289,7 @@ function runLog(repo: Repo): CommandResult {
     output: repo.commits
       .slice()
       .reverse()
+      .filter(commit => reachable.has(commit.id))
       .map(
         commit =>
           `${commit.id} ${commit.message}`
