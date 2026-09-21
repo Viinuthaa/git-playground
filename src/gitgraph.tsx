@@ -7,22 +7,18 @@ type GitGraphProps = {
 function GitGraph({ repo }: GitGraphProps) {
   const branchNames = Object.keys(repo.branches)
 
-  function getY(index: number): number {
-    const commit = repo.commits[index]
-    const branchIndex = branchNames.indexOf(commit.branch)
+  function getBranchIndex(branch: string): number {
+    const index = branchNames.indexOf(branch)
 
-    const previousCommit =
-      index > 0 ? repo.commits[index - 1] : null
+    return index === -1 ? 0 : index
+  }
 
-    const followsPrevious =
-      previousCommit &&
-      commit.parents.includes(previousCommit.id)
+  function getX(index: number): number {
+    return 100 + index * 120
+  }
 
-    if (!followsPrevious && index > 0) {
-      return 200 + branchIndex * 100
-    }
-
-    return 100 + branchIndex * 100
+  function getY(branch: string): number {
+    return 100 + getBranchIndex(branch) * 120
   }
 
   return (
@@ -32,26 +28,41 @@ function GitGraph({ repo }: GitGraphProps) {
       role="img"
       aria-label="Git commit graph"
     >
+      {branchNames.map((branch, index) => (
+        <text
+          key={branch}
+          x="20"
+          y={104 + index * 120}
+          className="branch-label"
+        >
+          {branch}
+        </text>
+      ))}
+
       {repo.commits.map((commit, index) => {
-        const x = 80 + index * 90
-        const y = getY(index)
+        const x = getX(index)
+        const y = getY(commit.branch)
 
         return (
           <g key={commit.id}>
             {commit.parents.map(parentId => {
-              const parentIndex = repo.commits.findIndex(
-                parent => parent.id === parentId
-              )
+              const parentIndex =
+                repo.commits.findIndex(
+                  parent => parent.id === parentId
+                )
 
               if (parentIndex === -1) {
                 return null
               }
 
+              const parent =
+                repo.commits[parentIndex]
+
               const parentX =
-                80 + parentIndex * 90
+                getX(parentIndex)
 
               const parentY =
-                getY(parentIndex)
+                getY(parent.branch)
 
               return (
                 <line
@@ -82,6 +93,22 @@ function GitGraph({ repo }: GitGraphProps) {
           </g>
         )
       })}
+
+      {repo.initialized && (
+        <text
+          x={
+            getX(
+              Math.max(repo.commits.length - 1, 0)
+            )
+          }
+          y={
+            getY(repo.currentBranch) + 35
+          }
+          className="head-label"
+        >
+          HEAD → {repo.currentBranch}
+        </text>
+      )}
     </svg>
   )
 }

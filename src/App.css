@@ -111,9 +111,19 @@ input {
 }
 
 .commit-label {
-  fill: #7d8579;
+  fill: #9da69a;
   font-size: 10px;
   text-anchor: middle;
+}
+
+.branch-label {
+  fill: #aab1a5;
+  font-size: 12px;
+}
+
+.head-label {
+  fill: #91a987;
+  font-size: 11px;
 }
 
 .terminal-panel {
