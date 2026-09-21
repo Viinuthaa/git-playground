@@ -85,6 +85,56 @@ function runBranch(
   }
 }
 
+function runDeleteBranch(
+  repo: Repo,
+  name?: string
+): CommandResult {
+  if (!repo.initialized) {
+    return notRepository(repo)
+  }
+
+  if (!name) {
+    return {
+      repo,
+      output: "Branch name required."
+    }
+  }
+
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      repo.branches,
+      name
+    )
+  ) {
+    return {
+      repo,
+      output: `Branch '${name}' not found.`
+    }
+  }
+
+  if (name === repo.currentBranch) {
+    return {
+      repo,
+      output: `Cannot delete the current branch '${name}'.`
+    }
+  }
+
+  const {
+    [name]: deletedBranch,
+    ...remainingBranches
+  } = repo.branches
+
+  void deletedBranch
+
+  return {
+    repo: {
+      ...repo,
+      branches: remainingBranches
+    },
+    output: `Deleted branch '${name}'.`
+  }
+}
+
 function runCheckout(
   repo: Repo,
   name?: string,
@@ -317,7 +367,10 @@ function runReset(repo: Repo): CommandResult {
     commit => commit.id === currentCommitId
   )
 
-  if (!currentCommit || currentCommit.parents.length === 0) {
+  if (
+    !currentCommit ||
+    currentCommit.parents.length === 0
+  ) {
     return {
       repo,
       output: "Nothing to reset."
@@ -349,6 +402,7 @@ function runHelp(repo: Repo): CommandResult {
       "git status",
       "git branch",
       "git branch <name>",
+      "git branch -d <name>",
       "git checkout <branch>",
       "git checkout -b <name>",
       'git commit -m "message"',
@@ -374,6 +428,16 @@ export function runCommand(
       repo,
       parsed.args[1],
       true
+    )
+  }
+
+  if (
+    parsed.command === "git branch" &&
+    parsed.args[0] === "-d"
+  ) {
+    return runDeleteBranch(
+      repo,
+      parsed.args[1]
     )
   }
 
