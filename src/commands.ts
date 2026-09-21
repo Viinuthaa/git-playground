@@ -61,7 +61,12 @@ function runBranch(
     }
   }
 
-  if (Object.prototype.hasOwnProperty.call(repo.branches, name)) {
+  if (
+    Object.prototype.hasOwnProperty.call(
+      repo.branches,
+      name
+    )
+  ) {
     return {
       repo,
       output: `Branch '${name}' already exists.`
@@ -97,7 +102,12 @@ function runCheckout(
   }
 
   if (createBranch) {
-    if (Object.prototype.hasOwnProperty.call(repo.branches, name)) {
+    if (
+      Object.prototype.hasOwnProperty.call(
+        repo.branches,
+        name
+      )
+    ) {
       return {
         repo,
         output: `Branch '${name}' already exists.`
@@ -117,7 +127,12 @@ function runCheckout(
     }
   }
 
-  if (!Object.prototype.hasOwnProperty.call(repo.branches, name)) {
+  if (
+    !Object.prototype.hasOwnProperty.call(
+      repo.branches,
+      name
+    )
+  ) {
     return {
       repo,
       output: `Branch '${name}' not found.`
@@ -283,6 +298,49 @@ function runMerge(
   }
 }
 
+function runReset(repo: Repo): CommandResult {
+  if (!repo.initialized) {
+    return notRepository(repo)
+  }
+
+  const currentCommitId =
+    repo.branches[repo.currentBranch]
+
+  if (!currentCommitId) {
+    return {
+      repo,
+      output: "Nothing to reset."
+    }
+  }
+
+  const currentCommit = repo.commits.find(
+    commit => commit.id === currentCommitId
+  )
+
+  if (!currentCommit || currentCommit.parents.length === 0) {
+    return {
+      repo,
+      output: "Nothing to reset."
+    }
+  }
+
+  const previousCommit =
+    currentCommit.parents[0]
+
+  return {
+    repo: {
+      ...repo,
+      branches: {
+        ...repo.branches,
+        [repo.currentBranch]: previousCommit
+      }
+    },
+    output:
+      `Reset '${repo.currentBranch}' to ` +
+      `${previousCommit}.`
+  }
+}
+
 function runHelp(repo: Repo): CommandResult {
   return {
     repo,
@@ -296,7 +354,8 @@ function runHelp(repo: Repo): CommandResult {
       'git commit -m "message"',
       "git log",
       "git show",
-      "git merge <branch>"
+      "git merge <branch>",
+      "git reset"
     ].join("\n")
   }
 }
@@ -351,6 +410,9 @@ export function runCommand(
         repo,
         parsed.args[0]
       )
+
+    case "git reset":
+      return runReset(repo)
 
     case "help":
       return runHelp(repo)

@@ -7,6 +7,24 @@ type GitGraphProps = {
 function GitGraph({ repo }: GitGraphProps) {
   const branchNames = Object.keys(repo.branches)
 
+  function getY(index: number): number {
+    const commit = repo.commits[index]
+    const branchIndex = branchNames.indexOf(commit.branch)
+
+    const previousCommit =
+      index > 0 ? repo.commits[index - 1] : null
+
+    const followsPrevious =
+      previousCommit &&
+      commit.parents.includes(previousCommit.id)
+
+    if (!followsPrevious && index > 0) {
+      return 200 + branchIndex * 100
+    }
+
+    return 100 + branchIndex * 100
+  }
+
   return (
     <svg
       className="git-graph"
@@ -16,8 +34,7 @@ function GitGraph({ repo }: GitGraphProps) {
     >
       {repo.commits.map((commit, index) => {
         const x = 80 + index * 90
-        const branchIndex = branchNames.indexOf(commit.branch)
-        const y = 100 + branchIndex * 100
+        const y = getY(index)
 
         return (
           <g key={commit.id}>
@@ -26,14 +43,15 @@ function GitGraph({ repo }: GitGraphProps) {
                 parent => parent.id === parentId
               )
 
-              if (parentIndex === -1) return null
+              if (parentIndex === -1) {
+                return null
+              }
 
-              const parent = repo.commits[parentIndex]
-              const parentBranchIndex =
-                branchNames.indexOf(parent.branch)
+              const parentX =
+                80 + parentIndex * 90
 
-              const parentX = 80 + parentIndex * 90
-              const parentY = 100 + parentBranchIndex * 100
+              const parentY =
+                getY(parentIndex)
 
               return (
                 <line
