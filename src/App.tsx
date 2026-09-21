@@ -1,32 +1,35 @@
-import { useState } from "react"
+import { useState, type FormEvent } from "react"
 import "./App.css"
 
 import { challenges } from "./challenges"
-import { createRepo, runCommand } from "./git"
-
-import type { Challenge } from "./challenges"
-import type { Repo } from "./git"
+import { createRepo, type Repo } from "./git"
+import { runCommand } from "./commands"
 
 import GitGraph from "./gitgraph"
 import Terminal from "./terminal"
 
+type HistoryItem = {
+  command: string
+  output: string
+}
+
 function App() {
   const [repo, setRepo] = useState<Repo>(createRepo)
   const [command, setCommand] = useState("")
-  const [history, setHistory] = useState<
-    { command: string; output: string }[]
-  >([])
+  const [history, setHistory] = useState<HistoryItem[]>([])
   const [challengeIndex, setChallengeIndex] = useState(0)
   const [challengeStep, setChallengeStep] = useState(0)
 
-  const challenge: Challenge = challenges[challengeIndex]
+  const challenge = challenges[challengeIndex]
 
-  function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
 
     const value = command.trim()
 
-    if (!value) return
+    if (!value) {
+      return
+    }
 
     if (value === "clear") {
       setHistory([])
@@ -38,8 +41,8 @@ function App() {
 
     setRepo(result.repo)
 
-    setHistory(prev => [
-      ...prev,
+    setHistory(previous => [
+      ...previous,
       {
         command: value,
         output: result.output
@@ -50,8 +53,8 @@ function App() {
 
     if (value === expected) {
       if (challengeStep + 1 === challenge.commands.length) {
-        setHistory(prev => [
-          ...prev,
+        setHistory(previous => [
+          ...previous,
           {
             command: "",
             output: "✓ Challenge complete!"
@@ -59,11 +62,11 @@ function App() {
         ])
 
         if (challengeIndex + 1 < challenges.length) {
-          setChallengeIndex(prev => prev + 1)
+          setChallengeIndex(previous => previous + 1)
           setChallengeStep(0)
         }
       } else {
-        setChallengeStep(prev => prev + 1)
+        setChallengeStep(previous => previous + 1)
       }
     }
 
