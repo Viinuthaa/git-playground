@@ -2,6 +2,7 @@ export type FileStatus =
   | "untracked"
   | "modified"
   | "staged"
+  | "clean"
 
 export type WorkingFile = {
   name: string
@@ -14,13 +15,13 @@ export type Commit = {
   message: string
   branch: string
   parents: string[]
+  files: string[]
 }
 
-export type Head =
-  | {
-      type: "branch"
-      name: string
-    }
+export type Head = {
+  type: "branch"
+  name: string
+}
 
 export type Repo = {
   initialized: boolean
@@ -61,6 +62,7 @@ export function createCommit(
     id: Math.random().toString(16).slice(2, 9),
     message,
     branch: repo.head.name,
-    parents
+    parents,
+    files: [...repo.staging]
   }
 }
