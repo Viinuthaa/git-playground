@@ -2,8 +2,8 @@ import { useState, type FormEvent } from "react"
 import "./App.css"
 
 import { challenges } from "./challenges"
-import { createRepo, type Repo } from "./git"
 import { runCommand } from "./commands"
+import { createRepo, type Repo } from "./git"
 
 import GitGraph from "./gitgraph"
 import Terminal from "./terminal"
@@ -22,14 +22,13 @@ function App() {
 
   const challenge = challenges[challengeIndex]
 
-  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+  function handleSubmit(
+    event: FormEvent<HTMLFormElement>
+  ) {
     event.preventDefault()
 
     const value = command.trim()
-
-    if (!value) {
-      return
-    }
+    if (!value) return
 
     if (value === "clear") {
       setHistory([])
@@ -49,10 +48,12 @@ function App() {
       }
     ])
 
-    const expected = challenge.commands[challengeStep]
+    if (value === challenge.commands[challengeStep]) {
+      const complete =
+        challengeStep + 1 ===
+        challenge.commands.length
 
-    if (value === expected) {
-      if (challengeStep + 1 === challenge.commands.length) {
+      if (complete) {
         setHistory(previous => [
           ...previous,
           {
@@ -61,12 +62,15 @@ function App() {
           }
         ])
 
-        if (challengeIndex + 1 < challenges.length) {
-          setChallengeIndex(previous => previous + 1)
+        if (
+          challengeIndex + 1 <
+          challenges.length
+        ) {
+          setChallengeIndex(index => index + 1)
           setChallengeStep(0)
         }
       } else {
-        setChallengeStep(previous => previous + 1)
+        setChallengeStep(step => step + 1)
       }
     }
 
@@ -97,7 +101,6 @@ function App() {
                 : "status-dot"
             }
           />
-
           {repo.initialized
             ? "repository active"
             : "no repository"}

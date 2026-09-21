@@ -5,12 +5,10 @@ export type Commit = {
   parents: string[]
 }
 
-export type Branches = Record<string, string | null>
-
 export type Repo = {
   initialized: boolean
   commits: Commit[]
-  branches: Branches
+  branches: Record<string, string | null>
   currentBranch: string
 }
 
@@ -23,17 +21,9 @@ export function createRepo(): Repo {
   return {
     initialized: false,
     commits: [],
-    branches: {
-      main: null
-    },
+    branches: { main: null },
     currentBranch: "main"
   }
-}
-
-export function makeId(): string {
-  return Math.random()
-    .toString(16)
-    .slice(2, 9)
 }
 
 export function createCommit(
@@ -42,7 +32,7 @@ export function createCommit(
   parents: string[]
 ): Commit {
   return {
-    id: makeId(),
+    id: Math.random().toString(16).slice(2, 9),
     message,
     branch: repo.currentBranch,
     parents

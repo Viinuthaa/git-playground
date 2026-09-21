@@ -6,7 +6,7 @@ type HistoryItem = {
   output: string
 }
 
-type TerminalProps = {
+type Props = {
   challenge: Challenge
   challengeStep: number
   history: HistoryItem[]
@@ -22,7 +22,7 @@ function Terminal({
   command,
   setCommand,
   onSubmit
-}: TerminalProps) {
+}: Props) {
   return (
     <div className="terminal-panel">
       <div className="panel-header">
@@ -31,7 +31,6 @@ function Terminal({
 
       <div className="challenge">
         <strong>{challenge.title}</strong>
-
         <p>
           Step {challengeStep + 1} of{" "}
           {challenge.commands.length}
@@ -53,8 +52,8 @@ function Terminal({
       </div>
 
       <form
-        onSubmit={onSubmit}
         className="terminal-form"
+        onSubmit={onSubmit}
       >
         <span>$</span>
 

@@ -31,7 +31,6 @@ input {
   margin: 0 0 6px;
   font-size: 28px;
   font-weight: 600;
-  letter-spacing: -0.5px;
 }
 
 .header p {
@@ -68,7 +67,6 @@ input {
 
 .graph-panel,
 .terminal-panel {
-  background: #151613;
   border: 1px solid #292c27;
   border-radius: 8px;
   overflow: hidden;
@@ -77,6 +75,7 @@ input {
 .graph-panel {
   display: flex;
   flex-direction: column;
+  background: #151613;
 }
 
 .panel-header {
@@ -96,7 +95,6 @@ input {
   width: 100%;
   height: 100%;
   min-height: 500px;
-  display: block;
 }
 
 .commit-line {
@@ -133,11 +131,6 @@ input {
   background: #0d0e0c;
 }
 
-.terminal-panel .panel-header {
-  background: #151613;
-  flex-shrink: 0;
-}
-
 .challenge {
   padding: 18px 20px 12px;
   color: #a1ad99;
@@ -171,7 +164,6 @@ input {
   color: #d6dbd2;
   font-family: "SFMono-Regular", Consolas, monospace;
   font-size: 13px;
-  word-break: break-word;
 }
 
 .terminal-entry pre {
@@ -191,21 +183,18 @@ input {
   padding: 15px 20px;
   border-top: 1px solid #292c27;
   background: #10110f;
-  flex-shrink: 0;
 }
 
 .terminal-form span {
-  flex-shrink: 0;
   color: #91a987;
   font-family: "SFMono-Regular", Consolas, monospace;
-  font-size: 13px;
 }
 
 .terminal-form input {
   flex: 1;
   min-width: 0;
-  border: none;
-  outline: none;
+  border: 0;
+  outline: 0;
   background: transparent;
   color: #d8ddd4;
   font-family: "SFMono-Regular", Consolas, monospace;

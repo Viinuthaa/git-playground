@@ -1,36 +1,30 @@
 import type { Repo } from "./git"
 
-type GitGraphProps = {
+type Props = {
   repo: Repo
 }
 
-function GitGraph({ repo }: GitGraphProps) {
-  const branchNames = Object.keys(repo.branches)
+function GitGraph({ repo }: Props) {
+  const branches = Object.keys(repo.branches)
 
-  function getBranchIndex(branch: string): number {
-    const index = branchNames.indexOf(branch)
-
+  const branchIndex = (branch: string) => {
+    const index = branches.indexOf(branch)
     return index === -1 ? 0 : index
   }
 
-  function getX(index: number): number {
-    return 100 + index * 120
-  }
+  const x = (index: number) => 100 + index * 120
+  const y = (branch: string) =>
+    100 + branchIndex(branch) * 120
 
-  function getY(branch: string): number {
-    return 100 + getBranchIndex(branch) * 120
-  }
+  const head = repo.branches[repo.currentBranch]
 
-  const headCommitId =
-    repo.branches[repo.currentBranch]
-
-  const headCommitIndex = repo.commits.findIndex(
-    commit => commit.id === headCommitId
+  const headIndex = repo.commits.findIndex(
+    commit => commit.id === head
   )
 
   const headCommit =
-    headCommitIndex >= 0
-      ? repo.commits[headCommitIndex]
+    headIndex >= 0
+      ? repo.commits[headIndex]
       : null
 
   return (
@@ -40,7 +34,7 @@ function GitGraph({ repo }: GitGraphProps) {
       role="img"
       aria-label="Git commit graph"
     >
-      {branchNames.map((branch, index) => (
+      {branches.map((branch, index) => (
         <text
           key={branch}
           x="20"
@@ -51,59 +45,51 @@ function GitGraph({ repo }: GitGraphProps) {
         </text>
       ))}
 
-      {repo.commits.map((commit, index) => {
-        const x = getX(index)
-        const y = getY(commit.branch)
-
-        return (
-          <g key={commit.id}>
-            {commit.parents.map(parentId => {
-              const parentIndex =
-                repo.commits.findIndex(
-                  parent => parent.id === parentId
-                )
-
-              if (parentIndex === -1) {
-                return null
-              }
-
-              const parent =
-                repo.commits[parentIndex]
-
-              return (
-                <line
-                  key={`${commit.id}-${parentId}`}
-                  x1={getX(parentIndex)}
-                  y1={getY(parent.branch)}
-                  x2={x}
-                  y2={y}
-                  className="commit-line"
-                />
+      {repo.commits.map((commit, index) => (
+        <g key={commit.id}>
+          {commit.parents.map(parentId => {
+            const parentIndex =
+              repo.commits.findIndex(
+                item => item.id === parentId
               )
-            })}
 
-            <circle
-              cx={x}
-              cy={y}
-              r="12"
-              className="commit-node"
-            />
+            if (parentIndex < 0) return null
 
-            <text
-              x={x}
-              y={y - 22}
-              className="commit-label"
-            >
-              {commit.message}
-            </text>
-          </g>
-        )
-      })}
+            const parent = repo.commits[parentIndex]
+
+            return (
+              <line
+                key={`${commit.id}-${parentId}`}
+                x1={x(parentIndex)}
+                y1={y(parent.branch)}
+                x2={x(index)}
+                y2={y(commit.branch)}
+                className="commit-line"
+              />
+            )
+          })}
+
+          <circle
+            cx={x(index)}
+            cy={y(commit.branch)}
+            r="12"
+            className="commit-node"
+          />
+
+          <text
+            x={x(index)}
+            y={y(commit.branch) - 22}
+            className="commit-label"
+          >
+            {commit.message}
+          </text>
+        </g>
+      ))}
 
       {headCommit && (
         <text
-          x={getX(headCommitIndex)}
-          y={getY(headCommit.branch) + 35}
+          x={x(headIndex)}
+          y={y(headCommit.branch) + 35}
           className="head-label"
         >
           HEAD → {repo.currentBranch}
