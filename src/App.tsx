@@ -1,9 +1,16 @@
-import { useState, type FormEvent } from "react"
+import {
+  useState,
+  type FormEvent
+} from "react"
+
 import "./App.css"
 
 import { challenges } from "./challenges"
 import { runCommand } from "./commands"
-import { createRepo, type Repo } from "./git"
+import {
+  createRepo,
+  type Repo
+} from "./git"
 
 import GitGraph from "./gitgraph"
 import Terminal from "./terminal"
@@ -14,13 +21,23 @@ type HistoryItem = {
 }
 
 function App() {
-  const [repo, setRepo] = useState<Repo>(createRepo)
-  const [command, setCommand] = useState("")
-  const [history, setHistory] = useState<HistoryItem[]>([])
-  const [challengeIndex, setChallengeIndex] = useState(0)
-  const [challengeStep, setChallengeStep] = useState(0)
+  const [repo, setRepo] =
+    useState<Repo>(createRepo)
 
-  const challenge = challenges[challengeIndex]
+  const [command, setCommand] =
+    useState("")
+
+  const [history, setHistory] =
+    useState<HistoryItem[]>([])
+
+  const [challengeIndex, setChallengeIndex] =
+    useState(0)
+
+  const [challengeStep, setChallengeStep] =
+    useState(0)
+
+  const challenge =
+    challenges[challengeIndex]
 
   function handleSubmit(
     event: FormEvent<HTMLFormElement>
@@ -28,6 +45,7 @@ function App() {
     event.preventDefault()
 
     const value = command.trim()
+
     if (!value) return
 
     if (value === "clear") {
@@ -36,7 +54,8 @@ function App() {
       return
     }
 
-    const result = runCommand(repo, value)
+    const result =
+      runCommand(repo, value)
 
     setRepo(result.repo)
 
@@ -48,7 +67,10 @@ function App() {
       }
     ])
 
-    if (value === challenge.commands[challengeStep]) {
+    if (
+      value ===
+      challenge.commands[challengeStep]
+    ) {
       const complete =
         challengeStep + 1 ===
         challenge.commands.length
@@ -58,7 +80,8 @@ function App() {
           ...previous,
           {
             command: "",
-            output: "✓ Challenge complete!"
+            output:
+              "✓ Challenge complete!"
           }
         ])
 
@@ -66,11 +89,16 @@ function App() {
           challengeIndex + 1 <
           challenges.length
         ) {
-          setChallengeIndex(index => index + 1)
+          setChallengeIndex(
+            index => index + 1
+          )
+
           setChallengeStep(0)
         }
       } else {
-        setChallengeStep(step => step + 1)
+        setChallengeStep(
+          step => step + 1
+        )
       }
     }
 
@@ -85,12 +113,26 @@ function App() {
     setChallengeStep(0)
   }
 
+  const stagedCount =
+    repo.files.filter(
+      file => file.status === "staged"
+    ).length
+
+  const changedCount =
+    repo.files.filter(
+      file => file.status !== "staged"
+    ).length
+
   return (
     <main className="app">
       <header className="header">
         <div>
           <h1>Git Playground</h1>
-          <p>See what your Git commands actually do.</p>
+
+          <p>
+            See what your Git commands
+            actually do.
+          </p>
         </div>
 
         <div className="status">
@@ -101,19 +143,40 @@ function App() {
                 : "status-dot"
             }
           />
+
           {repo.initialized
             ? "repository active"
             : "no repository"}
         </div>
       </header>
 
+      {repo.initialized && (
+        <div className="repo-state">
+          <span>
+            HEAD → {repo.head.name}
+          </span>
+
+          <span>
+            {stagedCount} staged
+          </span>
+
+          <span>
+            {changedCount} changed
+          </span>
+        </div>
+      )}
+
       <section className="workspace">
         <div className="graph-panel">
           <div className="panel-header">
-            <span>commit graph</span>
+            <span>
+              commit graph
+            </span>
 
             {repo.initialized && (
-              <span>HEAD → {repo.currentBranch}</span>
+              <span>
+                HEAD → {repo.head.name}
+              </span>
             )}
           </div>
 

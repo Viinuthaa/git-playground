@@ -7,10 +7,15 @@ import {
 const result = (
   repo: Repo,
   output: string
-): CommandResult => ({ repo, output })
+): CommandResult => ({
+  repo,
+  output
+})
 
-const hasBranch = (repo: Repo, name: string) =>
-  Object.hasOwn(repo.branches, name)
+const hasBranch = (
+  repo: Repo,
+  name: string
+) => Object.hasOwn(repo.branches, name)
 
 function requireRepo(repo: Repo) {
   return repo.initialized
@@ -20,7 +25,10 @@ function requireRepo(repo: Repo) {
 
 function init(repo: Repo) {
   return result(
-    { ...repo, initialized: true },
+    {
+      ...repo,
+      initialized: true
+    },
     "Initialized empty Git repository."
   )
 }
@@ -29,20 +37,61 @@ function status(repo: Repo) {
   const error = requireRepo(repo)
   if (error) return error
 
-  return result(
-    repo,
-    `On branch ${repo.currentBranch}`
+  const branch = repo.head.name
+
+  const changes = repo.files.filter(
+    file => file.status !== "staged"
   )
+
+  const staged = repo.files.filter(
+    file => file.status === "staged"
+  )
+
+  const lines = [
+    `On branch ${branch}`,
+    ""
+  ]
+
+  if (!changes.length && !staged.length) {
+    lines.push("nothing to commit, working tree clean")
+  }
+
+  if (staged.length) {
+    lines.push("Changes to be committed:")
+
+    staged.forEach(file => {
+      lines.push(`  staged: ${file.name}`)
+    })
+  }
+
+  if (changes.length) {
+    lines.push("Changes not staged for commit:")
+
+    changes.forEach(file => {
+      lines.push(`  ${file.status}: ${file.name}`)
+    })
+  }
+
+  return result(repo, lines.join("\n"))
 }
 
-function branch(repo: Repo, name?: string) {
+function branch(
+  repo: Repo,
+  name?: string
+) {
   const error = requireRepo(repo)
   if (error) return error
 
   if (!name) {
     return result(
       repo,
-      Object.keys(repo.branches).join("\n")
+      Object.keys(repo.branches)
+        .map(branchName =>
+          branchName === repo.head.name
+            ? `* ${branchName}`
+            : `  ${branchName}`
+        )
+        .join("\n")
     )
   }
 
@@ -58,7 +107,7 @@ function branch(repo: Repo, name?: string) {
       ...repo,
       branches: {
         ...repo.branches,
-        [name]: repo.branches[repo.currentBranch]
+        [name]: repo.branches[repo.head.name]
       }
     },
     `Created branch '${name}'.`
@@ -73,7 +122,10 @@ function deleteBranch(
   if (error) return error
 
   if (!name) {
-    return result(repo, "Branch name required.")
+    return result(
+      repo,
+      "Branch name required."
+    )
   }
 
   if (!hasBranch(repo, name)) {
@@ -83,18 +135,24 @@ function deleteBranch(
     )
   }
 
-  if (name === repo.currentBranch) {
+  if (name === repo.head.name) {
     return result(
       repo,
       `Cannot delete the current branch '${name}'.`
     )
   }
 
-  const branches = { ...repo.branches }
+  const branches = {
+    ...repo.branches
+  }
+
   delete branches[name]
 
   return result(
-    { ...repo, branches },
+    {
+      ...repo,
+      branches
+    },
     `Deleted branch '${name}'.`
   )
 }
@@ -108,7 +166,10 @@ function checkout(
   if (error) return error
 
   if (!name) {
-    return result(repo, "Branch name required.")
+    return result(
+      repo,
+      "Branch name required."
+    )
   }
 
   if (create) {
@@ -124,9 +185,12 @@ function checkout(
         ...repo,
         branches: {
           ...repo.branches,
-          [name]: repo.branches[repo.currentBranch]
+          [name]: repo.branches[repo.head.name]
         },
-        currentBranch: name
+        head: {
+          type: "branch",
+          name
+        }
       },
       `Switched to a new branch '${name}'.`
     )
@@ -140,12 +204,21 @@ function checkout(
   }
 
   return result(
-    { ...repo, currentBranch: name },
+    {
+      ...repo,
+      head: {
+        type: "branch",
+        name
+      }
+    },
     `Switched to branch '${name}'.`
   )
 }
 
-function commit(repo: Repo, value: string) {
+function commit(
+  repo: Repo,
+  value: string
+) {
   const error = requireRepo(repo)
   if (error) return error
 
@@ -154,11 +227,14 @@ function commit(repo: Repo, value: string) {
   )
 
   if (!match) {
-    return result(repo, "Commit message required.")
+    return result(
+      repo,
+      "Commit message required."
+    )
   }
 
   const message = match[1]
-  const parent = repo.branches[repo.currentBranch]
+  const parent = repo.branches[repo.head.name]
 
   const newCommit = createCommit(
     repo,
@@ -169,13 +245,16 @@ function commit(repo: Repo, value: string) {
   return result(
     {
       ...repo,
-      commits: [...repo.commits, newCommit],
+      commits: [
+        ...repo.commits,
+        newCommit
+      ],
       branches: {
         ...repo.branches,
-        [repo.currentBranch]: newCommit.id
+        [repo.head.name]: newCommit.id
       }
     },
-    `[${repo.currentBranch}] ${message}`
+    `[${repo.head.name}] ${message}`
   )
 }
 
@@ -192,10 +271,12 @@ function reachable(repo: Repo) {
     if (!commit) return
 
     found.add(id)
+
     commit.parents.forEach(visit)
   }
 
-  visit(repo.branches[repo.currentBranch])
+  visit(repo.branches[repo.head.name])
+
   return found
 }
 
@@ -206,7 +287,10 @@ function log(repo: Repo) {
   const commits = reachable(repo)
 
   if (!commits.size) {
-    return result(repo, "No commits yet.")
+    return result(
+      repo,
+      "No commits yet."
+    )
   }
 
   return result(
@@ -214,8 +298,12 @@ function log(repo: Repo) {
     repo.commits
       .slice()
       .reverse()
-      .filter(commit => commits.has(commit.id))
-      .map(commit => `${commit.id} ${commit.message}`)
+      .filter(commit =>
+        commits.has(commit.id)
+      )
+      .map(commit =>
+        `${commit.id} ${commit.message}`
+      )
       .join("\n")
   )
 }
@@ -224,14 +312,17 @@ function show(repo: Repo) {
   const error = requireRepo(repo)
   if (error) return error
 
-  const head = repo.branches[repo.currentBranch]
+  const head = repo.branches[repo.head.name]
 
   const commit = repo.commits.find(
     item => item.id === head
   )
 
   if (!commit) {
-    return result(repo, "No commits yet.")
+    return result(
+      repo,
+      "No commits yet."
+    )
   }
 
   return result(
@@ -240,12 +331,18 @@ function show(repo: Repo) {
   )
 }
 
-function merge(repo: Repo, name?: string) {
+function merge(
+  repo: Repo,
+  name?: string
+) {
   const error = requireRepo(repo)
   if (error) return error
 
   if (!name) {
-    return result(repo, "Branch name required.")
+    return result(
+      repo,
+      "Branch name required."
+    )
   }
 
   if (!hasBranch(repo, name)) {
@@ -255,7 +352,7 @@ function merge(repo: Repo, name?: string) {
     )
   }
 
-  if (name === repo.currentBranch) {
+  if (name === repo.head.name) {
     return result(
       repo,
       "Cannot merge a branch into itself."
@@ -263,12 +360,16 @@ function merge(repo: Repo, name?: string) {
   }
 
   const current =
-    repo.branches[repo.currentBranch]
+    repo.branches[repo.head.name]
 
-  const target = repo.branches[name]
+  const target =
+    repo.branches[name]
 
   if (!current || !target) {
-    return result(repo, "Nothing to merge.")
+    return result(
+      repo,
+      "Nothing to merge."
+    )
   }
 
   const mergeCommit = createCommit(
@@ -280,45 +381,60 @@ function merge(repo: Repo, name?: string) {
   return result(
     {
       ...repo,
-      commits: [...repo.commits, mergeCommit],
+      commits: [
+        ...repo.commits,
+        mergeCommit
+      ],
       branches: {
         ...repo.branches,
-        [repo.currentBranch]: mergeCommit.id
+        [repo.head.name]:
+          mergeCommit.id
       }
     },
-    `Merged '${name}' into '${repo.currentBranch}'.`
+    `Merged '${name}' into '${repo.head.name}'.`
   )
 }
 
-function reset(repo: Repo, target?: string) {
+function reset(
+  repo: Repo,
+  target?: string
+) {
   const error = requireRepo(repo)
   if (error) return error
 
   if (target !== "HEAD~1") {
-    return result(repo, "Usage: git reset HEAD~1")
+    return result(
+      repo,
+      "Usage: git reset HEAD~1"
+    )
   }
 
-  const head = repo.branches[repo.currentBranch]
+  const head =
+    repo.branches[repo.head.name]
 
   const commit = repo.commits.find(
     item => item.id === head
   )
 
   if (!commit?.parents.length) {
-    return result(repo, "Nothing to reset.")
+    return result(
+      repo,
+      "Nothing to reset."
+    )
   }
 
-  const previous = commit.parents[0]
+  const previous =
+    commit.parents[0]
 
   return result(
     {
       ...repo,
       branches: {
         ...repo.branches,
-        [repo.currentBranch]: previous
+        [repo.head.name]: previous
       }
     },
-    `Reset '${repo.currentBranch}' to ${previous}.`
+    `Reset '${repo.head.name}' to ${previous}.`
   )
 }
 
@@ -346,22 +462,34 @@ export function runCommand(
   repo: Repo,
   value: string
 ): CommandResult {
-  const parts = value.trim().split(/\s+/)
-  const command = parts.slice(0, 2).join(" ")
-  const args = parts.slice(2)
+  const parts =
+    value.trim().split(/\s+/)
+
+  const command =
+    parts.slice(0, 2).join(" ")
+
+  const args =
+    parts.slice(2)
 
   if (
     command === "git checkout" &&
     args[0] === "-b"
   ) {
-    return checkout(repo, args[1], true)
+    return checkout(
+      repo,
+      args[1],
+      true
+    )
   }
 
   if (
     command === "git branch" &&
     args[0] === "-d"
   ) {
-    return deleteBranch(repo, args[1])
+    return deleteBranch(
+      repo,
+      args[1]
+    )
   }
 
   switch (command) {
@@ -372,13 +500,22 @@ export function runCommand(
       return status(repo)
 
     case "git branch":
-      return branch(repo, args[0])
+      return branch(
+        repo,
+        args[0]
+      )
 
     case "git checkout":
-      return checkout(repo, args[0])
+      return checkout(
+        repo,
+        args[0]
+      )
 
     case "git commit":
-      return commit(repo, value)
+      return commit(
+        repo,
+        value
+      )
 
     case "git log":
       return log(repo)
@@ -387,10 +524,16 @@ export function runCommand(
       return show(repo)
 
     case "git merge":
-      return merge(repo, args[0])
+      return merge(
+        repo,
+        args[0]
+      )
 
     case "git reset":
-      return reset(repo, args[0])
+      return reset(
+        repo,
+        args[0]
+      )
 
     case "help":
       return help(repo)

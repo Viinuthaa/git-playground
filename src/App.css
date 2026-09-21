@@ -247,3 +247,10 @@ input {
     min-height: 500px;
   }
 }
+.repo-state {
+  display: flex;
+  gap: 18px;
+  margin-bottom: 16px;
+  color: #858c82;
+  font-size: 12px;
+}
