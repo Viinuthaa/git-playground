@@ -1,5 +1,11 @@
 import type { Repo } from "./git"
 
+function currentCommit(repo: Repo) {
+  return repo.head.type === "detached"
+    ? repo.head.name
+    : repo.branches[repo.head.name]
+}
+
 export function createBranch(
   repo: Repo,
   name: string
@@ -8,12 +14,8 @@ export function createBranch(
     return false
   }
 
-  const current =
-    repo.head.type === "detached"
-      ? repo.head.name
-      : repo.branches[repo.head.name]
-
-  repo.branches[name] = current ?? null
+  repo.branches[name] =
+    currentCommit(repo) ?? null
 
   return true
 }

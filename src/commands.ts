@@ -1,15 +1,16 @@
-import {
-  type CommandResult,
-  type Repo
+import type {
+  CommandResult,
+  Repo
 } from "./git"
 
 import {
-  createFiles,
-  findFile,
+  initFiles,
+  getFile,
   addFile,
   addAll,
   editFile,
-  cleanStagedFiles
+  cleanFiles,
+  resolveFile
 } from "./files"
 
 import {
@@ -20,20 +21,23 @@ import {
 
 import {
   getHead,
-  addReflog,
-  makeCommit,
   findCommit,
-  resetHead,
-  revertCommit,
-  getLog
+  commit,
+  reset,
+  revert,
+  logHistory,
+  record
 } from "./history"
 
-function result(
+import { merge } from "./merge"
+
+const output = (
   repo: Repo,
-  output: string
-): CommandResult {
-  return { repo, output }
-}
+  text: string
+): CommandResult => ({
+  repo,
+  output: text
+})
 
 function status(repo: Repo) {
   const staged = repo.files.filter(
@@ -57,31 +61,50 @@ function status(repo: Repo) {
 
   const lines = [`On ${branch}`, ""]
 
+  if (repo.conflicts.length) {
+    lines.push("Unmerged paths:")
+
+    repo.conflicts.forEach(file =>
+      lines.push(`  both modified: ${file}`)
+    )
+
+    lines.push("")
+  }
+
   if (staged.length) {
     lines.push("Changes to be committed:")
+
     staged.forEach(file =>
       lines.push(`  staged: ${file.name}`)
     )
+
     lines.push("")
   }
 
   if (modified.length) {
-    lines.push("Changes not staged for commit:")
+    lines.push(
+      "Changes not staged for commit:"
+    )
+
     modified.forEach(file =>
       lines.push(`  modified: ${file.name}`)
     )
+
     lines.push("")
   }
 
   if (untracked.length) {
     lines.push("Untracked files:")
+
     untracked.forEach(file =>
       lines.push(`  ${file.name}`)
     )
+
     lines.push("")
   }
 
   if (
+    !repo.conflicts.length &&
     !staged.length &&
     !modified.length &&
     !untracked.length
@@ -104,37 +127,41 @@ export function runCommand(
     const next = structuredClone(repo)
 
     if (next.initialized) {
-      return result(
+      return output(
         repo,
         "Reinitialized existing repository."
       )
     }
 
     next.initialized = true
-    createFiles(next)
+    initFiles(next)
 
-    return result(
+    return output(
       next,
       "Initialized empty Git repository."
     )
   }
 
   if (!repo.initialized) {
-    return result(
+    return output(
       repo,
       "Not a git repository. Run git init first."
     )
   }
 
   if (value === "git status") {
-    return result(repo, status(repo))
+    return output(repo, status(repo))
   }
 
   if (value === "git add .") {
     const next = structuredClone(repo)
+
     addAll(next)
 
-    return result(next, "All changes staged.")
+    return output(
+      next,
+      "All changes staged."
+    )
   }
 
   if (value.startsWith("git add ")) {
@@ -142,13 +169,13 @@ export function runCommand(
     const next = structuredClone(repo)
 
     if (!addFile(next, name)) {
-      return result(
+      return output(
         repo,
         `fatal: pathspec '${name}' did not match any files`
       )
     }
 
-    return result(
+    return output(
       next,
       `Changes to '${name}' staged.`
     )
@@ -159,15 +186,32 @@ export function runCommand(
     const next = structuredClone(repo)
 
     if (!editFile(next, name)) {
-      return result(
+      return output(
         repo,
         `File '${name}' not found.`
       )
     }
 
-    return result(
+    return output(
       next,
       `Modified '${name}'.`
+    )
+  }
+
+  if (value.startsWith("git resolve ")) {
+    const name = value.slice(12)
+    const next = structuredClone(repo)
+
+    if (!resolveFile(next, name)) {
+      return output(
+        repo,
+        `No conflict found in '${name}'.`
+      )
+    }
+
+    return output(
+      next,
+      `Resolved '${name}'.`
     )
   }
 
@@ -177,35 +221,54 @@ export function runCommand(
     )
 
     if (!match) {
-      return result(
+      return output(
         repo,
         'Use: git commit -m "message"'
       )
     }
 
+    if (repo.conflicts.length) {
+      return output(
+        repo,
+        "Resolve all conflicts before committing."
+      )
+    }
+
     if (!repo.staging.length) {
-      return result(
+      return output(
         repo,
         "Nothing to commit. Stage your changes first."
       )
     }
 
     const next = structuredClone(repo)
-    const commit = makeCommit(next, match[1])
-
-    cleanStagedFiles(next)
-
-    return result(
+    const newCommit = commit(
       next,
-      `[${commit.branch} ${commit.id}] ${commit.message}`
+      match[1]
+    )
+
+    cleanFiles(next)
+
+    return output(
+      next,
+      `[${newCommit.branch} ${newCommit.id}] ${newCommit.message}`
+    )
+  }
+
+  if (value.startsWith("git merge ")) {
+    const next = structuredClone(repo)
+
+    return output(
+      next,
+      merge(next, value.slice(10))
     )
   }
 
   if (value === "git reset HEAD~1") {
     const next = structuredClone(repo)
-    const previous = resetHead(next)
+    const previous = reset(next)
 
-    return result(
+    return output(
       previous ? next : repo,
       previous
         ? `HEAD is now at ${previous}`
@@ -214,25 +277,27 @@ export function runCommand(
   }
 
   if (value.startsWith("git revert ")) {
-    const id = value.slice(11)
     const next = structuredClone(repo)
-    const commit = revertCommit(next, id)
+    const newCommit = revert(
+      next,
+      value.slice(11)
+    )
 
-    if (!commit) {
-      return result(
+    if (!newCommit) {
+      return output(
         repo,
-        `fatal: commit '${id}' not found`
+        "Commit not found."
       )
     }
 
-    return result(
+    return output(
       next,
-      `[${commit.branch} ${commit.id}] ${commit.message}`
+      `[${newCommit.branch} ${newCommit.id}] ${newCommit.message}`
     )
   }
 
   if (value === "git reflog") {
-    return result(
+    return output(
       repo,
       repo.reflog.length
         ? repo.reflog.join("\n")
@@ -241,7 +306,7 @@ export function runCommand(
   }
 
   if (value === "git branch") {
-    return result(
+    return output(
       repo,
       Object.keys(repo.branches)
         .map(name =>
@@ -259,13 +324,13 @@ export function runCommand(
     const next = structuredClone(repo)
 
     if (!deleteBranch(next, name)) {
-      return result(
+      return output(
         repo,
         `error: cannot delete branch '${name}'`
       )
     }
 
-    return result(
+    return output(
       next,
       `Deleted branch ${name}.`
     )
@@ -276,13 +341,13 @@ export function runCommand(
     const next = structuredClone(repo)
 
     if (!createBranch(next, name)) {
-      return result(
+      return output(
         repo,
         `fatal: branch '${name}' already exists`
       )
     }
 
-    return result(
+    return output(
       next,
       `Created branch ${name}.`
     )
@@ -293,19 +358,20 @@ export function runCommand(
     const next = structuredClone(repo)
 
     if (!createBranch(next, name)) {
-      return result(
+      return output(
         repo,
         `fatal: branch '${name}' already exists`
       )
     }
 
     checkoutBranch(next, name)
-    addReflog(
+
+    record(
       next,
       `checkout: moving to ${name}`
     )
 
-    return result(
+    return output(
       next,
       `Switched to a new branch '${name}'.`
     )
@@ -316,68 +382,76 @@ export function runCommand(
     const next = structuredClone(repo)
 
     if (checkoutBranch(next, name)) {
-      addReflog(
+      record(
         next,
         `checkout: moving to ${name}`
       )
 
-      return result(
+      return output(
         next,
         `Switched to branch '${name}'.`
       )
     }
 
-    const commit = findCommit(repo, name)
+    const commitToCheckout =
+      findCommit(repo, name)
 
-    if (commit) {
+    if (commitToCheckout) {
       next.head = {
         type: "detached",
-        name: commit.id
+        name: commitToCheckout.id
       }
 
-      addReflog(
+      record(
         next,
-        `checkout: detached HEAD at ${commit.id}`
+        `checkout: detached HEAD at ${name}`
       )
 
-      return result(
+      return output(
         next,
-        `HEAD is now at ${commit.id} ${commit.message}`
+        `HEAD is now at ${name} ${commitToCheckout.message}`
       )
     }
 
-    return result(
+    return output(
       repo,
       `'${name}' is not a branch or commit`
     )
   }
 
   if (value === "git log") {
-    return result(repo, getLog(repo))
+    return output(
+      repo,
+      logHistory(repo)
+    )
   }
 
   if (value === "git show") {
     const current = getHead(repo)
-    const commit = current
+
+    const commitToShow = current
       ? findCommit(repo, current)
       : undefined
 
-    if (!commit) {
-      return result(repo, "No commits yet.")
+    if (!commitToShow) {
+      return output(
+        repo,
+        "No commits yet."
+      )
     }
 
-    return result(
+    return output(
       repo,
       [
-        `commit ${commit.id}`,
-        `message: ${commit.message}`,
-        `files: ${commit.files.join(", ")}`
+        `commit ${commitToShow.id}`,
+        `message: ${commitToShow.message}`,
+        `files: ${commitToShow.files.join(", ")}`
       ].join("\n")
     )
   }
 
   if (value === "help") {
-    return result(
+    return output(
       repo,
       [
         "git init",
@@ -385,7 +459,9 @@ export function runCommand(
         "git edit <file>",
         "git add <file>",
         "git add .",
+        "git resolve <file>",
         'git commit -m "message"',
+        "git merge <branch>",
         "git reset HEAD~1",
         "git revert <commit>",
         "git reflog",
@@ -402,7 +478,7 @@ export function runCommand(
     )
   }
 
-  return result(
+  return output(
     repo,
     `git: '${value}' is not a recognized command`
   )

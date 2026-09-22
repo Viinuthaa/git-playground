@@ -1,6 +1,6 @@
 import type { Repo } from "./git"
 
-export function createFiles(repo: Repo) {
+export function initFiles(repo: Repo) {
   repo.files = [
     {
       name: "index.html",
@@ -20,7 +20,7 @@ export function createFiles(repo: Repo) {
   ]
 }
 
-export function findFile(
+export function getFile(
   repo: Repo,
   name: string
 ) {
@@ -31,7 +31,7 @@ export function addFile(
   repo: Repo,
   name: string
 ) {
-  const file = findFile(repo, name)
+  const file = getFile(repo, name)
 
   if (!file) return false
 
@@ -59,7 +59,7 @@ export function editFile(
   repo: Repo,
   name: string
 ) {
-  const file = findFile(repo, name)
+  const file = getFile(repo, name)
 
   if (!file) return false
 
@@ -73,7 +73,7 @@ export function editFile(
   return true
 }
 
-export function cleanStagedFiles(repo: Repo) {
+export function cleanFiles(repo: Repo) {
   repo.files.forEach(file => {
     if (repo.staging.includes(file.name)) {
       file.status = "clean"
@@ -81,4 +81,21 @@ export function cleanStagedFiles(repo: Repo) {
   })
 
   repo.staging = []
+}
+
+export function resolveFile(
+  repo: Repo,
+  name: string
+) {
+  if (!repo.conflicts.includes(name)) {
+    return false
+  }
+
+  repo.conflicts = repo.conflicts.filter(
+    item => item !== name
+  )
+
+  addFile(repo, name)
+
+  return true
 }

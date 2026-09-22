@@ -9,41 +9,6 @@ export function getHead(repo: Repo) {
     : repo.branches[repo.head.name]
 }
 
-export function addReflog(
-  repo: Repo,
-  message: string
-) {
-  repo.reflog.unshift(message)
-}
-
-export function makeCommit(
-  repo: Repo,
-  message: string
-) {
-  const parent = getHead(repo)
-
-  const commit = createCommit(
-    repo,
-    message,
-    parent ? [parent] : []
-  )
-
-  repo.commits.push(commit)
-
-  if (repo.head.type === "branch") {
-    repo.branches[repo.head.name] = commit.id
-  } else {
-    repo.head.name = commit.id
-  }
-
-  addReflog(
-    repo,
-    `${commit.id} ${message}`
-  )
-
-  return commit
-}
-
 export function findCommit(
   repo: Repo,
   id: string
@@ -53,17 +18,57 @@ export function findCommit(
   )
 }
 
-export function resetHead(repo: Repo) {
-  const current = getHead(repo)
-  const commit = current
-    ? findCommit(repo, current)
-    : undefined
+export function record(
+  repo: Repo,
+  message: string
+) {
+  repo.reflog.unshift(message)
+}
 
-  if (!commit?.parents[0]) {
+export function commit(
+  repo: Repo,
+  message: string,
+  parents?: string[]
+) {
+  const parent = getHead(repo)
+
+  const newCommit = createCommit(
+    repo,
+    message,
+    parents ?? (parent ? [parent] : [])
+  )
+
+  repo.commits.push(newCommit)
+
+  if (repo.head.type === "branch") {
+    repo.branches[repo.head.name] = newCommit.id
+  } else {
+    repo.head.name = newCommit.id
+  }
+
+  record(
+    repo,
+    `${newCommit.id} ${message}`
+  )
+
+  return newCommit
+}
+
+export function reset(repo: Repo) {
+  const current = getHead(repo)
+
+  if (!current) return null
+
+  const currentCommit = findCommit(
+    repo,
+    current
+  )
+
+  if (!currentCommit?.parents[0]) {
     return null
   }
 
-  const previous = commit.parents[0]
+  const previous = currentCommit.parents[0]
 
   if (repo.head.type === "branch") {
     repo.branches[repo.head.name] = previous
@@ -71,7 +76,7 @@ export function resetHead(repo: Repo) {
     repo.head.name = previous
   }
 
-  addReflog(
+  record(
     repo,
     `${previous} reset HEAD~1`
   )
@@ -79,7 +84,7 @@ export function resetHead(repo: Repo) {
   return previous
 }
 
-export function revertCommit(
+export function revert(
   repo: Repo,
   id: string
 ) {
@@ -90,50 +95,59 @@ export function revertCommit(
     return null
   }
 
-  const commit = {
-    id: Math.random().toString(16).slice(2, 9),
-    message: `Revert "${target.message}"`,
-    branch:
-      repo.head.type === "branch"
-        ? repo.head.name
-        : "HEAD",
-    parents: [parent],
-    files: [...target.files]
-  }
-
-  repo.commits.push(commit)
-
-  if (repo.head.type === "branch") {
-    repo.branches[repo.head.name] = commit.id
-  } else {
-    repo.head.name = commit.id
-  }
-
-  addReflog(
+  return commit(
     repo,
-    `${commit.id} ${commit.message}`
+    `Revert "${target.message}"`,
+    [parent]
   )
-
-  return commit
 }
 
-export function getLog(repo: Repo) {
+export function logHistory(repo: Repo) {
   const result: string[] = []
   let current = getHead(repo)
 
   while (current) {
-    const commit = findCommit(repo, current)
+    const item = findCommit(repo, current)
 
-    if (!commit) break
+    if (!item) break
 
     result.push(
-      `commit ${commit.id}\n${commit.message}`
+      `commit ${item.id}\n${item.message}`
     )
 
-    current = commit.parents[0]
+    current = item.parents[0]
   }
 
   return result.length
     ? result.join("\n\n")
     : "No commits yet."
+}
+
+export function ancestors(
+  repo: Repo,
+  id: string
+) {
+  const result = new Set<string>()
+  const stack = [id]
+
+  while (stack.length) {
+    const current = stack.pop()
+
+    if (!current || result.has(current)) {
+      continue
+    }
+
+    result.add(current)
+
+    const commit = findCommit(
+      repo,
+      current
+    )
+
+    commit?.parents.forEach(parent =>
+      stack.push(parent)
+    )
+  }
+
+  return result
 }

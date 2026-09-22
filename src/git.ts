@@ -31,6 +31,7 @@ export type Repo = {
   branches: Record<string, string | null>
   head: Head
   reflog: string[]
+  conflicts: string[]
 }
 
 export type CommandResult = {
@@ -44,14 +45,13 @@ export function createRepo(): Repo {
     files: [],
     staging: [],
     commits: [],
-    branches: {
-      main: null
-    },
+    branches: { main: null },
     head: {
       type: "branch",
       name: "main"
     },
-    reflog: []
+    reflog: [],
+    conflicts: []
   }
 }
 
