@@ -58,6 +58,36 @@ input {
   background: #8fae83;
 }
 
+.learning-bar {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid #292c27;
+  border-radius: 7px;
+  background: #151613;
+}
+
+.learning-info {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: #858d82;
+  font-size: 11px;
+}
+
+.progress-track {
+  height: 4px;
+  overflow: hidden;
+  border-radius: 4px;
+  background: #292c27;
+}
+
+.progress-fill {
+  height: 100%;
+  border-radius: 4px;
+  background: #91a987;
+  transition: width 0.2s ease;
+}
+
 .repo-state {
   display: flex;
   gap: 18px;
@@ -74,15 +104,16 @@ input {
 }
 
 .graph-panel,
-.terminal-panel {
+.terminal-panel,
+.learning-panel {
   border: 1px solid #292c27;
   border-radius: 8px;
-  overflow: hidden;
 }
 
 .graph-panel {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
   background: #151613;
 }
 
@@ -184,13 +215,11 @@ input {
   border: 1px solid #30342e;
   border-radius: 7px;
   background: #10110f;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .commit-details-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
   margin-bottom: 12px;
   color: #858d82;
   font-size: 11px;
@@ -205,14 +234,10 @@ input {
   font-size: 11px;
 }
 
-.commit-details-header button:hover {
-  color: #aab1a5;
-}
-
 .commit-details-id {
   margin-bottom: 8px;
   color: #91a987;
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: monospace;
   font-size: 12px;
 }
 
@@ -236,11 +261,19 @@ input {
   text-align: right;
 }
 
+.learning-side {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
 .terminal-panel {
   display: flex;
   flex-direction: column;
-  min-height: 580px;
+  min-height: 500px;
   background: #0d0e0c;
+  overflow: hidden;
 }
 
 .challenge {
@@ -274,14 +307,14 @@ input {
 .terminal-command {
   margin-bottom: 6px;
   color: #d6dbd2;
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: monospace;
   font-size: 13px;
 }
 
 .terminal-entry pre {
   margin: 0 0 0 20px;
   color: #858d82;
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: monospace;
   font-size: 12px;
   line-height: 1.5;
   white-space: pre-wrap;
@@ -299,7 +332,7 @@ input {
 
 .terminal-form span {
   color: #91a987;
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: monospace;
 }
 
 .terminal-form input {
@@ -309,7 +342,7 @@ input {
   outline: 0;
   background: transparent;
   color: #d8ddd4;
-  font-family: "SFMono-Regular", Consolas, monospace;
+  font-family: monospace;
   font-size: 13px;
 }
 
@@ -317,8 +350,98 @@ input {
   color: #555b53;
 }
 
-.reset-button {
+.learning-panel {
+  padding: 16px 20px;
+  background: #151613;
+}
+
+.learning-label {
+  color: #62695f;
+  font-size: 10px;
+  letter-spacing: 0.8px;
+}
+
+.learning-panel h2 {
+  margin: 6px 0;
+  color: #c8cec3;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.learning-panel p {
+  margin: 0;
+  color: #858d82;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.step-info {
   margin-top: 14px;
+  color: #91a987;
+  font-size: 11px;
+}
+
+.hint-box {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #292c27;
+}
+
+.hint-button {
+  padding: 6px 10px;
+  border: 1px solid #30342e;
+  border-radius: 5px;
+  background: transparent;
+  color: #929a8e;
+  cursor: pointer;
+  font-size: 11px;
+}
+
+.hint-button:hover {
+  background: #1b1d19;
+  color: #c0c7bb;
+}
+
+.hint-box p {
+  margin-top: 9px;
+}
+
+.completed-list {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #292c27;
+}
+
+.completed-item {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 7px;
+  color: #62695f;
+  font-size: 11px;
+}
+
+.completed-item.done {
+  color: #9aaa91;
+}
+
+.completed-item span {
+  width: 12px;
+}
+
+.bottom-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.bottom-actions > span {
+  color: #555b53;
+  font-size: 10px;
+}
+
+.reset-button {
   padding: 8px 14px;
   border: 1px solid #30342e;
   border-radius: 6px;

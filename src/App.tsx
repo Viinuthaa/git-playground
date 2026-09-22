@@ -11,6 +11,11 @@ import {
   createRepo,
   type Repo
 } from "./git"
+import {
+  clearProgress,
+  loadProgress,
+  saveProgress
+} from "./progress"
 
 import GitGraph from "./gitgraph"
 import Terminal from "./terminal"
@@ -21,6 +26,8 @@ type HistoryItem = {
 }
 
 function App() {
+  const savedProgress = loadProgress()
+
   const [repo, setRepo] =
     useState<Repo>(createRepo)
 
@@ -31,10 +38,20 @@ function App() {
     useState<HistoryItem[]>([])
 
   const [challengeIndex, setChallengeIndex] =
-    useState(0)
+    useState(
+      savedProgress.currentChallenge
+    )
 
   const [challengeStep, setChallengeStep] =
     useState(0)
+
+  const [completed, setCompleted] =
+    useState<number[]>(
+      savedProgress.completed
+    )
+
+  const [showHint, setShowHint] =
+    useState(false)
 
   const challenge =
     challenges[challengeIndex]
@@ -76,6 +93,19 @@ function App() {
         challenge.commands.length
 
       if (complete) {
+        const nextCompleted =
+          completed.includes(challengeIndex)
+            ? completed
+            : [
+                ...completed,
+                challengeIndex
+              ]
+
+        setCompleted(nextCompleted)
+
+        const nextChallenge =
+          challengeIndex + 1
+
         setHistory(previous => [
           ...previous,
           {
@@ -86,19 +116,35 @@ function App() {
         ])
 
         if (
-          challengeIndex + 1 <
+          nextChallenge <
           challenges.length
         ) {
           setChallengeIndex(
-            index => index + 1
+            nextChallenge
           )
 
           setChallengeStep(0)
+
+          saveProgress({
+            completed: nextCompleted,
+            currentChallenge:
+              nextChallenge
+          })
+        } else {
+          saveProgress({
+            completed: nextCompleted,
+            currentChallenge:
+              challengeIndex
+          })
         }
+
+        setShowHint(false)
       } else {
         setChallengeStep(
           step => step + 1
         )
+
+        setShowHint(false)
       }
     }
 
@@ -111,6 +157,10 @@ function App() {
     setCommand("")
     setChallengeIndex(0)
     setChallengeStep(0)
+    setCompleted([])
+    setShowHint(false)
+
+    clearProgress()
   }
 
   const stagedCount =
@@ -122,6 +172,13 @@ function App() {
     repo.files.filter(
       file => file.status !== "staged"
     ).length
+
+  const progressPercent =
+    Math.round(
+      (completed.length /
+        challenges.length) *
+        100
+    )
 
   return (
     <main className="app">
@@ -149,6 +206,28 @@ function App() {
             : "no repository"}
         </div>
       </header>
+
+      <div className="learning-bar">
+        <div className="learning-info">
+          <span>
+            Learning progress
+          </span>
+
+          <span>
+            {completed.length}/
+            {challenges.length} completed
+          </span>
+        </div>
+
+        <div className="progress-track">
+          <div
+            className="progress-fill"
+            style={{
+              width: `${progressPercent}%`
+            }}
+          />
+        </div>
+      </div>
 
       {repo.initialized && (
         <div className="repo-state">
@@ -183,22 +262,95 @@ function App() {
           <GitGraph repo={repo} />
         </div>
 
-        <Terminal
-          challenge={challenge}
-          challengeStep={challengeStep}
-          history={history}
-          command={command}
-          setCommand={setCommand}
-          onSubmit={handleSubmit}
-        />
+        <div className="learning-side">
+          <Terminal
+            challenge={challenge}
+            challengeStep={challengeStep}
+            history={history}
+            command={command}
+            setCommand={setCommand}
+            onSubmit={handleSubmit}
+          />
+
+          <div className="learning-panel">
+            <span className="learning-label">
+              CHALLENGE
+            </span>
+
+            <h2>{challenge.title}</h2>
+
+            <p>
+              {challenge.description}
+            </p>
+
+            <div className="step-info">
+              Step {challengeStep + 1} of{" "}
+              {challenge.commands.length}
+            </div>
+
+            <div className="hint-box">
+              <button
+                className="hint-button"
+                onClick={() =>
+                  setShowHint(
+                    value => !value
+                  )
+                }
+              >
+                {showHint
+                  ? "Hide hint"
+                  : "Show hint"}
+              </button>
+
+              {showHint && (
+                <p>
+                  {
+                    challenge.hints[
+                      challengeStep
+                    ]
+                  }
+                </p>
+              )}
+            </div>
+
+            <div className="completed-list">
+              {challenges.map(
+                (item, index) => (
+                  <div
+                    key={item.title}
+                    className={
+                      completed.includes(index)
+                        ? "completed-item done"
+                        : "completed-item"
+                    }
+                  >
+                    <span>
+                      {completed.includes(index)
+                        ? "✓"
+                        : "○"}
+                    </span>
+
+                    {item.title}
+                  </div>
+                )
+              )}
+            </div>
+          </div>
+        </div>
       </section>
 
-      <button
-        className="reset-button"
-        onClick={resetPlayground}
-      >
-        Reset
-      </button>
+      <div className="bottom-actions">
+        <button
+          className="reset-button"
+          onClick={resetPlayground}
+        >
+          Reset
+        </button>
+
+        <span>
+          Progress is saved in this browser.
+        </span>
+      </div>
     </main>
   )
 }
