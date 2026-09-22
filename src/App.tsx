@@ -1,4 +1,5 @@
 import {
+  useEffect,
   useState,
   type FormEvent
 } from "react"
@@ -26,8 +27,6 @@ type HistoryItem = {
 }
 
 function App() {
-  const savedProgress = loadProgress()
-
   const [repo, setRepo] =
     useState<Repo>(createRepo)
 
@@ -38,20 +37,42 @@ function App() {
     useState<HistoryItem[]>([])
 
   const [challengeIndex, setChallengeIndex] =
-    useState(
-      savedProgress.currentChallenge
-    )
+    useState(0)
 
   const [challengeStep, setChallengeStep] =
     useState(0)
 
   const [completed, setCompleted] =
-    useState<number[]>(
-      savedProgress.completed
-    )
+    useState<number[]>([])
 
   const [showHint, setShowHint] =
     useState(false)
+
+  const [loading, setLoading] =
+    useState(true)
+
+  const [saveError, setSaveError] =
+    useState(false)
+
+  useEffect(() => {
+    loadProgress()
+      .then(progress => {
+        setCompleted(progress.completed)
+
+        setChallengeIndex(
+          Math.min(
+            progress.currentChallenge,
+            challenges.length - 1
+          )
+        )
+      })
+      .catch(() => {
+        setSaveError(true)
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [])
 
   const challenge =
     challenges[challengeIndex]
@@ -129,13 +150,17 @@ function App() {
             completed: nextCompleted,
             currentChallenge:
               nextChallenge
-          })
+          }).catch(() =>
+            setSaveError(true)
+          )
         } else {
           saveProgress({
             completed: nextCompleted,
             currentChallenge:
               challengeIndex
-          })
+          }).catch(() =>
+            setSaveError(true)
+          )
         }
 
         setShowHint(false)
@@ -160,7 +185,9 @@ function App() {
     setCompleted([])
     setShowHint(false)
 
-    clearProgress()
+    clearProgress().catch(() =>
+      setSaveError(true)
+    )
   }
 
   const stagedCount =
@@ -348,7 +375,11 @@ function App() {
         </button>
 
         <span>
-          Progress is saved in this browser.
+          {loading
+            ? "Loading progress..."
+            : saveError
+              ? "Backend unavailable"
+              : "Progress is saved to the server."}
         </span>
       </div>
     </main>

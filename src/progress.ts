@@ -1,39 +1,43 @@
-const STORAGE_KEY = "git-playground-progress"
-
 export type Progress = {
   completed: number[]
   currentChallenge: number
 }
 
-const defaultProgress: Progress = {
+const fallback: Progress = {
   completed: [],
   currentChallenge: 0
 }
 
-export function loadProgress(): Progress {
-  const saved =
-    localStorage.getItem(STORAGE_KEY)
+const API = "http://localhost:3001"
 
-  if (!saved) {
-    return defaultProgress
-  }
-
+export async function loadProgress(): Promise<Progress> {
   try {
-    return JSON.parse(saved)
+    const response = await fetch(API)
+
+    if (!response.ok) {
+      return fallback
+    }
+
+    return await response.json()
   } catch {
-    return defaultProgress
+    return fallback
   }
 }
 
-export function saveProgress(
+export async function saveProgress(
   progress: Progress
 ) {
-  localStorage.setItem(
-    STORAGE_KEY,
-    JSON.stringify(progress)
-  )
+  await fetch(API, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify(progress)
+  })
 }
 
-export function clearProgress() {
-  localStorage.removeItem(STORAGE_KEY)
+export async function clearProgress() {
+  await fetch(API, {
+    method: "DELETE"
+  })
 }
