@@ -18,9 +18,10 @@ export type Commit = {
   files: string[]
 }
 
-export type Head =
-  | { type: "branch"; name: string }
-  | { type: "detached"; commit: string }
+export type Head = {
+  type: "branch" | "detached"
+  name: string
+}
 
 export type Repo = {
   initialized: boolean
@@ -43,8 +44,13 @@ export function createRepo(): Repo {
     files: [],
     staging: [],
     commits: [],
-    branches: { main: null },
-    head: { type: "branch", name: "main" },
+    branches: {
+      main: null
+    },
+    head: {
+      type: "branch",
+      name: "main"
+    },
     reflog: []
   }
 }

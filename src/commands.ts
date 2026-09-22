@@ -1,82 +1,97 @@
 import {
-  createCommit,
   type CommandResult,
   type Repo
 } from "./git"
 
-const head = (repo: Repo) =>
-  repo.head.type === "branch"
-    ? repo.branches[repo.head.name]
-    : repo.head.commit
+import {
+  createFiles,
+  findFile,
+  addFile,
+  addAll,
+  editFile,
+  cleanStagedFiles
+} from "./files"
 
-const file = (repo: Repo, name: string) =>
-  repo.files.find(item => item.name === name)
+import {
+  createBranch,
+  deleteBranch,
+  checkoutBranch
+} from "./branches"
 
-const log = (repo: Repo, message: string) =>
-  repo.reflog.unshift(message)
+import {
+  getHead,
+  addReflog,
+  makeCommit,
+  findCommit,
+  resetHead,
+  revertCommit,
+  getLog
+} from "./history"
 
-function initialFiles(repo: Repo) {
-  repo.files = [
-    {
-      name: "index.html",
-      content: "<html></html>",
-      status: "untracked"
-    },
-    {
-      name: "app.js",
-      content: "console.log('hello')",
-      status: "untracked"
-    },
-    {
-      name: "README.md",
-      content: "# Git Playground",
-      status: "untracked"
-    }
-  ]
+function result(
+  repo: Repo,
+  output: string
+): CommandResult {
+  return { repo, output }
 }
 
-function commit(
-  repo: Repo,
-  message: string
-): CommandResult {
-  if (!repo.staging.length) {
-    return {
-      repo,
-      output: "Nothing to commit. Stage your changes first."
-    }
-  }
-
-  const next = structuredClone(repo)
-  const current = head(next)
-
-  const newCommit = createCommit(
-    next,
-    message,
-    current ? [current] : []
+function status(repo: Repo) {
+  const staged = repo.files.filter(
+    file => repo.staging.includes(file.name)
   )
 
-  next.commits.push(newCommit)
+  const modified = repo.files.filter(
+    file =>
+      file.status === "modified" &&
+      !repo.staging.includes(file.name)
+  )
 
-  if (next.head.type === "branch") {
-    next.branches[next.head.name] = newCommit.id
-  } else {
-    next.head.commit = newCommit.id
+  const untracked = repo.files.filter(
+    file => file.status === "untracked"
+  )
+
+  const branch =
+    repo.head.type === "branch"
+      ? repo.head.name
+      : "detached HEAD"
+
+  const lines = [`On ${branch}`, ""]
+
+  if (staged.length) {
+    lines.push("Changes to be committed:")
+    staged.forEach(file =>
+      lines.push(`  staged: ${file.name}`)
+    )
+    lines.push("")
   }
 
-  next.files.forEach(item => {
-    if (next.staging.includes(item.name)) {
-      item.status = "clean"
-    }
-  })
-
-  next.staging = []
-  log(next, `${newCommit.id} ${message}`)
-
-  return {
-    repo: next,
-    output:
-      `[${newCommit.branch} ${newCommit.id}] ${message}`
+  if (modified.length) {
+    lines.push("Changes not staged for commit:")
+    modified.forEach(file =>
+      lines.push(`  modified: ${file.name}`)
+    )
+    lines.push("")
   }
+
+  if (untracked.length) {
+    lines.push("Untracked files:")
+    untracked.forEach(file =>
+      lines.push(`  ${file.name}`)
+    )
+    lines.push("")
+  }
+
+  if (
+    !staged.length &&
+    !modified.length &&
+    !untracked.length
+  ) {
+    lines.push(
+      "nothing to commit, working tree clean"
+    )
+  }
+
+  return lines.join("\n")
 }
 
 export function runCommand(
@@ -89,156 +104,71 @@ export function runCommand(
     const next = structuredClone(repo)
 
     if (next.initialized) {
-      return {
+      return result(
         repo,
-        output: "Reinitialized existing repository."
-      }
+        "Reinitialized existing repository."
+      )
     }
 
     next.initialized = true
-    initialFiles(next)
+    createFiles(next)
 
-    return {
-      repo: next,
-      output: "Initialized empty Git repository."
-    }
+    return result(
+      next,
+      "Initialized empty Git repository."
+    )
   }
 
   if (!repo.initialized) {
-    return {
+    return result(
       repo,
-      output: "Not a git repository. Run git init first."
-    }
+      "Not a git repository. Run git init first."
+    )
   }
 
   if (value === "git status") {
-    const staged = repo.files.filter(
-      item => repo.staging.includes(item.name)
-    )
-
-    const modified = repo.files.filter(
-      item =>
-        item.status === "modified" &&
-        !repo.staging.includes(item.name)
-    )
-
-    const untracked = repo.files.filter(
-      item => item.status === "untracked"
-    )
-
-    const branch =
-      repo.head.type === "branch"
-        ? repo.head.name
-        : "detached HEAD"
-
-    const lines = [`On ${branch}`, ""]
-
-    if (staged.length) {
-      lines.push("Changes to be committed:")
-      staged.forEach(item =>
-        lines.push(`  staged: ${item.name}`)
-      )
-      lines.push("")
-    }
-
-    if (modified.length) {
-      lines.push("Changes not staged for commit:")
-      modified.forEach(item =>
-        lines.push(`  modified: ${item.name}`)
-      )
-      lines.push("")
-    }
-
-    if (untracked.length) {
-      lines.push("Untracked files:")
-      untracked.forEach(item =>
-        lines.push(`  ${item.name}`)
-      )
-      lines.push("")
-    }
-
-    if (
-      !staged.length &&
-      !modified.length &&
-      !untracked.length
-    ) {
-      lines.push("nothing to commit, working tree clean")
-    }
-
-    return {
-      repo,
-      output: lines.join("\n")
-    }
+    return result(repo, status(repo))
   }
 
   if (value === "git add .") {
     const next = structuredClone(repo)
+    addAll(next)
 
-    next.files.forEach(item => {
-      if (
-        item.status === "untracked" ||
-        item.status === "modified"
-      ) {
-        item.status = "staged"
-
-        if (!next.staging.includes(item.name)) {
-          next.staging.push(item.name)
-        }
-      }
-    })
-
-    return {
-      repo: next,
-      output: "All changes staged."
-    }
+    return result(next, "All changes staged.")
   }
 
   if (value.startsWith("git add ")) {
     const name = value.slice(8)
     const next = structuredClone(repo)
-    const item = file(next, name)
 
-    if (!item) {
-      return {
+    if (!addFile(next, name)) {
+      return result(
         repo,
-        output: `fatal: pathspec '${name}' did not match any files`
-      }
+        `fatal: pathspec '${name}' did not match any files`
+      )
     }
 
-    item.status = "staged"
-
-    if (!next.staging.includes(name)) {
-      next.staging.push(name)
-    }
-
-    return {
-      repo: next,
-      output: `Changes to '${name}' staged.`
-    }
+    return result(
+      next,
+      `Changes to '${name}' staged.`
+    )
   }
 
   if (value.startsWith("git edit ")) {
     const name = value.slice(9)
     const next = structuredClone(repo)
-    const item = file(next, name)
 
-    if (!item) {
-      return {
+    if (!editFile(next, name)) {
+      return result(
         repo,
-        output: `File '${name}' not found.`
-      }
+        `File '${name}' not found.`
+      )
     }
 
-    item.content += "\n// change"
-    item.status = "modified"
-    next.staging = next.staging.filter(
-      name => name !== item.name
+    return result(
+      next,
+      `Modified '${name}'.`
     )
-
-    return {
-      repo: next,
-      output: `Modified '${name}'.`
-    }
   }
 
   if (value.startsWith("git commit -m ")) {
@@ -247,111 +177,73 @@ export function runCommand(
     )
 
     if (!match) {
-      return {
+      return result(
         repo,
-        output: 'Use: git commit -m "message"'
-      }
+        'Use: git commit -m "message"'
+      )
     }
 
-    return commit(repo, match[1])
-  }
-
-  if (value === "git reset HEAD~1") {
-    const current = head(repo)
-    const commit = repo.commits.find(
-      item => item.id === current
-    )
-
-    if (!commit?.parents[0]) {
-      return {
+    if (!repo.staging.length) {
+      return result(
         repo,
-        output: "HEAD has no parent."
-      }
+        "Nothing to commit. Stage your changes first."
+      )
     }
 
     const next = structuredClone(repo)
-    const previous = commit.parents[0]
+    const commit = makeCommit(next, match[1])
 
-    if (next.head.type === "branch") {
-      next.branches[next.head.name] = previous
-    } else {
-      next.head.commit = previous
-    }
+    cleanStagedFiles(next)
 
-    log(next, `${previous} reset HEAD~1`)
+    return result(
+      next,
+      `[${commit.branch} ${commit.id}] ${commit.message}`
+    )
+  }
 
-    return {
-      repo: next,
-      output: `HEAD is now at ${previous}`
-    }
+  if (value === "git reset HEAD~1") {
+    const next = structuredClone(repo)
+    const previous = resetHead(next)
+
+    return result(
+      previous ? next : repo,
+      previous
+        ? `HEAD is now at ${previous}`
+        : "HEAD has no parent."
+    )
   }
 
   if (value.startsWith("git revert ")) {
     const id = value.slice(11)
-    const target = repo.commits.find(
-      item => item.id === id
-    )
-
-    if (!target) {
-      return {
-        repo,
-        output: `fatal: commit '${id}' not found`
-      }
-    }
-
-    const current = head(repo)
-
-    if (!current) {
-      return {
-        repo,
-        output: "Nothing to revert."
-      }
-    }
-
     const next = structuredClone(repo)
+    const commit = revertCommit(next, id)
 
-    const newCommit = {
-      id: Math.random().toString(16).slice(2, 9),
-      message: `Revert "${target.message}"`,
-      branch:
-        next.head.type === "branch"
-          ? next.head.name
-          : "HEAD",
-      parents: [current],
-      files: [...target.files]
+    if (!commit) {
+      return result(
+        repo,
+        `fatal: commit '${id}' not found`
+      )
     }
 
-    next.commits.push(newCommit)
-
-    if (next.head.type === "branch") {
-      next.branches[next.head.name] = newCommit.id
-    } else {
-      next.head.commit = newCommit.id
-    }
-
-    log(next, `${newCommit.id} ${newCommit.message}`)
-
-    return {
-      repo: next,
-      output:
-        `[${newCommit.branch} ${newCommit.id}] ${newCommit.message}`
-    }
+    return result(
+      next,
+      `[${commit.branch} ${commit.id}] ${commit.message}`
+    )
   }
 
   if (value === "git reflog") {
-    return {
+    return result(
       repo,
-      output:
-        repo.reflog.length
-          ? repo.reflog.join("\n")
-          : "No reflog entries yet."
-    }
+      repo.reflog.length
+        ? repo.reflog.join("\n")
+        : "No reflog entries yet."
+    )
   }
 
   if (value === "git branch") {
-    return {
+    return result(
       repo,
-      output: Object.keys(repo.branches)
+      Object.keys(repo.branches)
         .map(name =>
           repo.head.type === "branch" &&
           name === repo.head.name
@@ -359,186 +251,135 @@ export function runCommand(
             : `  ${name}`
         )
         .join("\n")
-    }
+    )
   }
 
   if (value.startsWith("git branch -d ")) {
     const name = value.slice(14)
-
-    if (repo.branches[name] === undefined) {
-      return {
-        repo,
-        output: `error: branch '${name}' not found`
-      }
-    }
-
-    if (
-      repo.head.type === "branch" &&
-      name === repo.head.name
-    ) {
-      return {
-        repo,
-        output: "error: cannot delete the current branch"
-      }
-    }
-
     const next = structuredClone(repo)
-    delete next.branches[name]
 
-    return {
-      repo: next,
-      output: `Deleted branch ${name}.`
+    if (!deleteBranch(next, name)) {
+      return result(
+        repo,
+        `error: cannot delete branch '${name}'`
+      )
     }
+
+    return result(
+      next,
+      `Deleted branch ${name}.`
+    )
   }
 
   if (value.startsWith("git branch ")) {
     const name = value.slice(11)
-
-    if (repo.branches[name] !== undefined) {
-      return {
-        repo,
-        output: `fatal: branch '${name}' already exists`
-      }
-    }
-
     const next = structuredClone(repo)
-    next.branches[name] = head(next)
 
-    return {
-      repo: next,
-      output: `Created branch ${name}.`
+    if (!createBranch(next, name)) {
+      return result(
+        repo,
+        `fatal: branch '${name}' already exists`
+      )
     }
+
+    return result(
+      next,
+      `Created branch ${name}.`
+    )
   }
 
   if (value.startsWith("git checkout -b ")) {
     const name = value.slice(16)
-
-    if (repo.branches[name] !== undefined) {
-      return {
-        repo,
-        output: `fatal: branch '${name}' already exists`
-      }
-    }
-
     const next = structuredClone(repo)
 
-    next.branches[name] = head(next)
-    next.head = {
-      type: "branch",
-      name
+    if (!createBranch(next, name)) {
+      return result(
+        repo,
+        `fatal: branch '${name}' already exists`
+      )
     }
 
-    log(next, `checkout: moving to ${name}`)
+    checkoutBranch(next, name)
+    addReflog(
+      next,
+      `checkout: moving to ${name}`
+    )
 
-    return {
-      repo: next,
-      output:
-        `Switched to a new branch '${name}'.`
-    }
+    return result(
+      next,
+      `Switched to a new branch '${name}'.`
+    )
   }
 
   if (value.startsWith("git checkout ")) {
     const name = value.slice(13)
+    const next = structuredClone(repo)
 
-    if (repo.branches[name] !== undefined) {
-      const next = structuredClone(repo)
+    if (checkoutBranch(next, name)) {
+      addReflog(
+        next,
+        `checkout: moving to ${name}`
+      )
 
-      next.head = {
-        type: "branch",
-        name
-      }
-
-      log(next, `checkout: moving to ${name}`)
-
-      return {
-        repo: next,
-        output:
-          `Switched to branch '${name}'.`
-      }
+      return result(
+        next,
+        `Switched to branch '${name}'.`
+      )
     }
 
-    const target = repo.commits.find(
-      item => item.id === name
-    )
+    const commit = findCommit(repo, name)
 
-    if (target) {
-      const next = structuredClone(repo)
-
+    if (commit) {
       next.head = {
         type: "detached",
-        commit: target.id
+        name: commit.id
       }
 
-      log(next, `checkout: detached HEAD at ${name}`)
+      addReflog(
+        next,
+        `checkout: detached HEAD at ${commit.id}`
+      )
 
-      return {
-        repo: next,
-        output:
-          `HEAD is now at ${target.id} ${target.message}`
-      }
+      return result(
+        next,
+        `HEAD is now at ${commit.id} ${commit.message}`
+      )
     }
 
-    return {
+    return result(
       repo,
-      output:
-        `error: '${name}' is not a branch or commit`
-    }
+      `'${name}' is not a branch or commit`
+    )
   }
 
   if (value === "git log") {
-    const result: string[] = []
-    let current = head(repo)
-
-    while (current) {
-      const item = repo.commits.find(
-        commit => commit.id === current
-      )
-
-      if (!item) break
-
-      result.push(
-        `commit ${item.id}\n${item.message}`
-      )
-
-      current = item.parents[0]
-    }
-
-    return {
-      repo,
-      output:
-        result.length
-          ? result.join("\n\n")
-          : "No commits yet."
-    }
+    return result(repo, getLog(repo))
   }
 
   if (value === "git show") {
-    const current = head(repo)
-    const item = repo.commits.find(
-      commit => commit.id === current
-    )
+    const current = getHead(repo)
+    const commit = current
+      ? findCommit(repo, current)
+      : undefined
 
-    if (!item) {
-      return {
-        repo,
-        output: "No commits yet."
-      }
+    if (!commit) {
+      return result(repo, "No commits yet.")
     }
 
-    return {
+    return result(
       repo,
-      output: [
-        `commit ${item.id}`,
-        `message: ${item.message}`,
-        `files: ${item.files.join(", ")}`
+      [
+        `commit ${commit.id}`,
+        `message: ${commit.message}`,
+        `files: ${commit.files.join(", ")}`
       ].join("\n")
-    }
+    )
   }
 
   if (value === "help") {
-    return {
+    return result(
       repo,
-      output: [
+      [
         "git init",
         "git status",
         "git edit <file>",
@@ -558,12 +399,11 @@ export function runCommand(
         "git show",
         "help"
       ].join("\n")
-    }
+    )
   }
 
-  return {
+  return result(
     repo,
-    output:
-      `git: '${value}' is not a recognized command`
-  }
+    `git: '${value}' is not a recognized command`
+  )
 }

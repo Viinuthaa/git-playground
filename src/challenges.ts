@@ -22,11 +22,10 @@ export const challenges: Challenge[] = [
     ]
   },
   {
-    title: "Merge a feature",
+    title: "Explore Git history",
     commands: [
-      'git commit -m "feature work"',
-      "git checkout main",
-      "git merge feature"
+      "git log",
+      "git reflog"
     ]
   }
 ]
