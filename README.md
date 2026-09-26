@@ -16,15 +16,12 @@ An interactive Git learning tool that visualizes what Git commands actually do.
 
 React · TypeScript · Vite · CSS · SVG · Node.js
 
-## Run Locally
-
-```bash
-npm install
-npm run dev
-
-## Why I built this
+## Why I Built This
 
 Git is easy to use once you know the commands, but understanding what is actually happening to branches, commits, and `HEAD` can be confusing.
 
 Git Playground is my attempt to make those relationships easier to see and experiment with.
 
+## Preview
+
+![Git Playground Preview](./screenshot.png)
